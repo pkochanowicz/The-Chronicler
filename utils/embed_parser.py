@@ -255,7 +255,7 @@ def build_character_embeds(character: Character) -> List[discord.Embed]:
         value=(
             f"**Race:** {character.race}\n"
             f"**Class:** {character.char_class}\n"
-            f"**Role:** {character.role}\n"
+            f"**Role:** {character.roles}\n"
             f"**Professions:** {character.professions}"
         ),
         inline=False

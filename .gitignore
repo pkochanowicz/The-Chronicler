@@ -33,6 +33,7 @@ ENV/
 
 # Google credentials
 credentials.json
+credentials_b64.txt
 token.pickle
 token.json
 
@@ -62,4 +63,5 @@ htmlcov/
 # Test files
 sanity_check.py
 .gemini/
+.claude/
 gha-creds-*.json

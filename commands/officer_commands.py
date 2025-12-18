@@ -36,7 +36,7 @@ class OfficerCommands(commands.Cog):
         """
         # Check permissions (Officer)
         user_roles = [r.id for r in interaction.user.roles]
-        allowed_roles = settings.LIFECYCLE_ROLE_IDS
+        allowed_roles = settings.OFFICER_ROLE_IDS
         
         if not any(role_id in user_roles for role_id in allowed_roles):
              await interaction.response.send_message(

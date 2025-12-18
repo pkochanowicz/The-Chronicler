@@ -85,10 +85,53 @@ def validate_roles(roles: List[str]) -> bool:
     return True
 
 def validate_professions(professions: List[str]) -> bool:
-    """Validate professions list (all valid, can be empty)."""
+    """Validate professions list (all valid, can be empty).
+
+    Enforces World of Warcraft profession limits:
+    - Maximum 2 primary professions (gathering/crafting)
+    - Maximum 4 secondary professions (utility)
+
+    Per TECHNICAL.md:
+    Primary: Alchemy, Blacksmithing, Enchanting, Engineering,
+             Herbalism, Leatherworking, Mining, Skinning,
+             Tailoring, Jewelcrafting
+    Secondary: First Aid, Cooking, Fishing, Survival
+    """
+    # Define profession categories
+    PRIMARY_PROFESSIONS = {
+        "Alchemy", "Blacksmithing", "Enchanting", "Engineering",
+        "Herbalism", "Leatherworking", "Mining", "Skinning",
+        "Tailoring", "Jewelcrafting"
+    }
+
+    SECONDARY_PROFESSIONS = {
+        "First Aid", "Cooking", "Fishing", "Survival"
+    }
+
+    # Validate each profession exists
     for prof in professions:
         if prof not in VALID_PROFESSIONS:
             raise ValidationError(f"Invalid profession: {prof}. Must be one of: {', '.join(VALID_PROFESSIONS)}")
+
+    # Count professions by category
+    primary_count = sum(1 for p in professions if p in PRIMARY_PROFESSIONS)
+    secondary_count = sum(1 for p in professions if p in SECONDARY_PROFESSIONS)
+
+    # Enforce limits
+    if primary_count > 2:
+        primary_selected = [p for p in professions if p in PRIMARY_PROFESSIONS]
+        raise ValidationError(
+            f"Cannot have more than 2 primary professions. "
+            f"Selected {primary_count}: {', '.join(primary_selected)}"
+        )
+
+    if secondary_count > 4:
+        secondary_selected = [p for p in professions if p in SECONDARY_PROFESSIONS]
+        raise ValidationError(
+            f"Cannot have more than 4 secondary professions. "
+            f"Selected {secondary_count}: {', '.join(secondary_selected)}"
+        )
+
     return True
 
 def validate_url(url: str) -> bool:
@@ -107,3 +150,24 @@ def validate_url(url: str) -> bool:
     if not re.match(regex, url):
         raise ValidationError(f"Invalid URL format: {url}")
     return True
+
+def sanitize_input(text: str) -> str:
+    """
+    Sanitize input string.
+    
+    - Trims leading/trailing whitespace.
+    - Preserves apostrophes (O'Brien).
+    - Prevents basic injection/formatting issues (implementation details depend on threat model).
+    
+    For this context, we mainly ensure it's a clean string.
+    """
+    if not text:
+        return ""
+    
+    # Strip whitespace
+    sanitized = str(text).strip()
+    
+    # Additional sanitization can be added here if needed (e.g. escaping HTML/Markdown)
+    
+    return sanitized
+

@@ -31,8 +31,17 @@ from domain.validators import (
 from services.sheets_service import CharacterRegistryService
 from services.webhook_handler import handle_post_to_recruitment # Or trigger mechanism
 from utils.embed_parser import build_character_embeds, serialize_embeds
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
+
+# Profession validation (WoW rules: max 2 main + 4 secondary)
+MAIN_PROFESSIONS = [
+    "Alchemy", "Blacksmithing", "Enchanting", "Engineering",
+    "Herbalism", "Inscription", "Jewelcrafting", "Leatherworking",
+    "Mining", "Skinning", "Tailoring"
+]
+SECONDARY_PROFESSIONS = ["Cooking", "First Aid", "Fishing", "Archaeology"]
 
 class RegistrationFlow(InteractiveFlow):
     """
@@ -109,6 +118,17 @@ class RegistrationFlow(InteractiveFlow):
         no_btn = Button(label="No, remain anonymous", style=discord.ButtonStyle.red, emoji="❌")
         
         async def yes_callback(interaction):
+            # Validate user object
+            if not self.user or not self.user.id:
+                logger.error("Invalid user object in registration flow")
+                await interaction.response.send_message(
+                    "❌ Error: Invalid user session. Please try again.",
+                    ephemeral=True
+                )
+                self.data["consent"] = False
+                view.stop()
+                return
+
             self.data["consent"] = True
             self.data["discord_id"] = str(self.user.id)
             self.data["discord_name"] = str(self.user)
@@ -252,7 +272,31 @@ class RegistrationFlow(InteractiveFlow):
         skip_btn = Button(label="Skip (No professions)", style=discord.ButtonStyle.secondary)
         
         async def select_callback(interaction):
-            self.data["professions"] = ", ".join(select.values)
+            selected = select.values
+
+            # Validate WoW profession rules: max 2 main + 4 secondary
+            main_count = sum(1 for p in selected if p in MAIN_PROFESSIONS)
+            secondary_count = sum(1 for p in selected if p in SECONDARY_PROFESSIONS)
+
+            if main_count > 2:
+                await interaction.response.send_message(
+                    f"❌ You can only have 2 main professions (you selected {main_count})!\n"
+                    f"Please try again.",
+                    ephemeral=True
+                )
+                # Don't stop view - user can select again
+                return
+
+            if secondary_count > 4:
+                await interaction.response.send_message(
+                    f"❌ You can only have 4 secondary professions (you selected {secondary_count})!\n"
+                    f"Please try again.",
+                    ephemeral=True
+                )
+                # Don't stop view - user can select again
+                return
+
+            self.data["professions"] = ", ".join(selected)
             await interaction.response.defer()
             view.stop()
             
@@ -409,20 +453,24 @@ class RegistrationFlow(InteractiveFlow):
                 self.data["portrait_url"] = url
                 self.data["request_sdxl"] = False
                 view.stop()
-            except Exception:
-                # If invalid, maybe just warn and use default or retry?
-                # For now, just stop.
-                self.data["portrait_url"] = "" # Invalid
+            except Exception as e:
+                # Notify user of validation failure
+                await interaction.followup.send(
+                    f"❌ Invalid URL: {str(e)}\n\nUsing default placeholder instead.",
+                    ephemeral=True
+                )
+                self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                self.data["request_sdxl"] = False
                 view.stop()
 
         async def default_callback(interaction):
-            self.data["portrait_url"] = "" # Will use default from settings
+            self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
             self.data["request_sdxl"] = False
             await interaction.response.defer()
             view.stop()
             
         async def ai_callback(interaction):
-            self.data["portrait_url"] = ""
+            self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL  # Will be replaced by AI later
             self.data["request_sdxl"] = True
             await interaction.response.defer()
             view.stop()

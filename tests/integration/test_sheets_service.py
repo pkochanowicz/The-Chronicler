@@ -24,30 +24,28 @@ class TestSheetsService:
     """
 
     @pytest.fixture
-    def registry(self, mock_sheets_client):
+    def registry(self, mock_sheets_client, monkeypatch):
         """Initialize service with mocked client."""
-        # We need to patch the internal client creation
-        with pytest.MonkeyPatch.context() as m:
-            # Mock _connect_to_sheet to set self.sheet
-            def mock_connect(service_self):
-                # Simulate the behavior of _connect_to_sheet using the mock client
-                service_self.client = mock_sheets_client
-                # In conftest, mock_sheets_client.open_by_key("key").sheet1 is the mock sheet
-                # We can just access it directly or via the chain
-                service_self.sheet = mock_sheets_client.open_by_key("key").sheet1
-            
-            m.setattr("services.sheets_service.CharacterRegistryService._connect_to_sheet", mock_connect)
-            
-            # Also need to mock _validate_schema to avoid error during init if we don't mock the sheet content
-            mock_sheets_client.open_by_key("key").sheet1.row_values.return_value = [
-                "timestamp", "discord_id", "discord_name", "char_name", "race", "class", 
-                "roles", "professions", "backstory", "personality", "quotes", "portrait_url", 
-                "trait_1", "trait_2", "trait_3", "status", "confirmation", "request_sdxl", 
-                "recruitment_msg_id", "forum_post_url", "reviewed_by", "embed_json", 
-                "death_cause", "death_story", "created_at", "updated_at", "notes"
-            ]
-            
-            return CharacterRegistryService()
+        # Mock _connect_to_sheet to set self.sheet
+        def mock_connect(service_self):
+            service_self.client = mock_sheets_client
+            service_self.sheet = mock_sheets_client.open_by_key("key").sheet1
+
+        monkeypatch.setattr(
+            "services.sheets_service.CharacterRegistryService._connect_to_sheet",
+            mock_connect
+        )
+
+        # Mock schema validation - return all 27 column names
+        mock_sheets_client.open_by_key("key").sheet1.row_values.return_value = [
+            "timestamp", "discord_id", "discord_name", "char_name", "race", "class",
+            "roles", "professions", "backstory", "personality", "quotes", "portrait_url",
+            "trait_1", "trait_2", "trait_3", "status", "confirmation", "request_sdxl",
+            "recruitment_msg_id", "forum_post_url", "reviewed_by", "embed_json",
+            "death_cause", "death_story", "created_at", "updated_at", "notes"
+        ]
+
+        return CharacterRegistryService()
 
     def test_initialization_validates_schema(self, registry):
         """Test that initialization checks for all 27 columns."""

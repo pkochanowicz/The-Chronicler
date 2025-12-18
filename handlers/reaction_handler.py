@@ -42,14 +42,17 @@ class ReactionHandler(commands.Cog):
         if reaction.message.channel.id != settings.RECRUITMENT_CHANNEL_ID:
             return
 
-        # Check permission (Officer)
-        if hasattr(user, "roles"):
-            user_roles = [r.id for r in user.roles]
-            allowed_roles = settings.LIFECYCLE_ROLE_IDS # Officers approve
-            if not any(rid in user_roles for rid in allowed_roles):
-                return
-        else:
-            return # DM reaction? Ignore.
+        # Check that user is a guild member (not DM)
+        if not isinstance(user, discord.Member):
+            logger.warning(f"Reaction from non-member user {user.id} in recruitment channel (unexpected), ignoring")
+            return
+
+        # Check permission (Officer roles only)
+        user_roles = [r.id for r in user.roles]
+        allowed_roles = settings.OFFICER_ROLE_IDS  # Officers approve
+        if not any(rid in user_roles for rid in allowed_roles):
+            logger.debug(f"Reaction from non-officer {user.id}, ignoring")
+            return
 
         # Check emoji
         emoji = str(reaction.emoji)
@@ -102,7 +105,7 @@ class ReactionHandler(commands.Cog):
             )
             
             # DM User
-            await self._notify_user(discord_id, f"🎉 Your character **{char_name}** has been APPROVED! Check the Vault: {forum_url}")
+            await self._notify_user(discord_id, f"🎉 Your character **{char_name}** has been APPROVED! Check the Vault: {forum_url}", message.channel)
             
             # Update recruitment message
             await message.reply(f"✅ Approved by {officer.mention}")
@@ -122,7 +125,7 @@ class ReactionHandler(commands.Cog):
             )
             
             # DM User
-            await self._notify_user(discord_id, f"❌ Your character **{char_name}** was rejected by {officer.name}. Please contact an officer for details.")
+            await self._notify_user(discord_id, f"❌ Your character **{char_name}** was rejected by {officer.name}. Please contact an officer for details.", message.channel)
             
             # Update recruitment message
             await message.reply(f"❌ Rejected by {officer.mention}")
@@ -134,8 +137,10 @@ class ReactionHandler(commands.Cog):
         """Create a thread in the character vault."""
         forum_channel = self.bot.get_channel(settings.FORUM_CHANNEL_ID)
         if not forum_channel:
-            logger.error("Forum channel not found")
-            return ""
+            error_msg = f"❌ CRITICAL ERROR: Forum channel (ID: {settings.FORUM_CHANNEL_ID}) not found! Cannot create character vault post. Please check bot configuration."
+            logger.error(error_msg)
+            # This is called from _approve_character which has try/except, so we can raise
+            raise ValueError(f"Forum channel {settings.FORUM_CHANNEL_ID} not found")
             
         # Forum channels use start_thread/create_thread
         # If it's a ForumChannel (discord.ForumChannel), we use create_thread(name=..., content=..., embed=...)
@@ -172,13 +177,20 @@ class ReactionHandler(commands.Cog):
             logger.error(f"Failed to create vault post: {e}")
             return ""
 
-    async def _notify_user(self, discord_id, content):
+    async def _notify_user(self, discord_id, content, fallback_channel=None):
+        """Notify user via DM. If DM fails, post warning in fallback channel."""
         try:
             user = await self.bot.fetch_user(int(discord_id))
             if user:
                 await user.send(content)
         except Exception as e:
             logger.warning(f"Failed to DM user {discord_id}: {e}")
+            # Notify in channel if DM failed
+            if fallback_channel:
+                await fallback_channel.send(
+                    f"⚠️ Could not DM <@{discord_id}> (they may have DMs disabled). "
+                    f"Please notify them manually about their character status."
+                )
 
 async def setup(bot):
     await bot.add_cog(ReactionHandler(bot))

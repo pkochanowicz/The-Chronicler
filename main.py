@@ -50,10 +50,6 @@ async def setup_hook():
 def main():
     """Main entry point."""
     try:
-        # Validate configuration before starting
-        settings.validate()
-        logger.info("Configuration validated successfully")
-
         # Set setup_hook
         bot.setup_hook = setup_hook
 

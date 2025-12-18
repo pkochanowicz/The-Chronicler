@@ -25,8 +25,18 @@ class TestBurialCeremony:
     @pytest.mark.asyncio
     async def test_burial_ceremony_steps(self, mock_sheets_client):
         """
-        Test that handle_initiate_burial performs all required Discord actions 
-        and updates sheet to BURIED.
+        User Story: Officer completes burial and webhook executes final ceremony automatically.
+
+        Flow:
+        1. Webhook receives INITIATE_BURIAL trigger for deceased character
+        2. Bot fetches character's forum thread from #character-vault
+        3. Bot moves forum thread to #cemetery channel
+        4. Bot posts death story and ceremony message to thread
+        5. Character status updated to BURIED in Google Sheets
+        6. All actions execute atomically as single ceremony
+
+        Expected: Complete burial ceremony workflow automated via webhook, forum thread
+        relocated, death story posted, status updated to final BURIED state.
         """
         # We need to import the handler logic (services.webhook_handler or similar)
         # Assuming logic is in services.webhook_handler.handle_initiate_burial
@@ -47,9 +57,15 @@ class TestBurialCeremony:
         
         # Configure get_channel to return None so it awaits fetch_channel
         mock_bot.get_channel.return_value = None
-        # Configure fetch_channel to return the mock thread
+        # Configure fetch_channel to return the mock thread (acts as vault thread AND cemetery channel)
         mock_bot.fetch_channel.return_value = mock_thread
         
+        # Setup create_thread return value (ThreadWithMessage mock)
+        mock_new_thread_msg = MagicMock()
+        mock_new_thread = AsyncMock()
+        mock_new_thread_msg.thread = mock_new_thread
+        mock_thread.create_thread.return_value = mock_new_thread_msg
+
         # Mock Sheets Service
         # We patch __init__ to avoid connection, and update_character_status to verify call
         with patch("services.sheets_service.CharacterRegistryService.__init__", return_value=None) as mock_init, \
@@ -61,11 +77,12 @@ class TestBurialCeremony:
                  
                  # Verify steps:
                  # 1. Fetch thread
-                 # 2. Move to cemetery (edit parent? or recreate?)
-                 #    Docs say: "Move forum post to #cemetery". Discord API: thread.edit(parent=cemetery_channel)
                  
-                 # 3. Post death story
-                 mock_thread.send.assert_called()
+                 # 2. Create new thread in cemetery
+                 mock_thread.create_thread.assert_called()
+
+                 # 3. Post death story to NEW thread
+                 mock_new_thread.send.assert_called()
                  
                  # 4. Update status to BURIED
                  mock_update.assert_called_with("Thorgar", "BURIED", forum_post_url=ANY, updated_at=ANY)

@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""
-Configuration package.
-"""
+# config/__init__.py
+"""Configuration package for Azeroth Bound Bot."""
+from .settings import Settings, settings
+
+__all__ = ["Settings", "settings"]

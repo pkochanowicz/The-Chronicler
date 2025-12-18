@@ -20,9 +20,10 @@ Handles incoming webhooks from Google Apps Script.
 """
 import logging
 import json
+import asyncio
 from aiohttp import web
 from config.settings import settings
-from utils.embed_parser import parse_embed_json
+from utils.embed_parser import parse_embed_json, build_cemetery_embed
 from services.sheets_service import CharacterRegistryService
 from datetime import datetime
 
@@ -101,8 +102,9 @@ async def handle_post_to_recruitment(character_data):
         content = f"New Character Registration: {character_data.get('char_name')} ({character_data.get('discord_name')})\n{' '.join(mentions)}"
         
         message = await channel.send(content=content, embeds=embeds)
-        
+
         await message.add_reaction(settings.APPROVE_EMOJI)
+        await asyncio.sleep(0.5)  # 500ms delay to avoid burst rate limits
         await message.add_reaction(settings.REJECT_EMOJI)
         
         # Update sheets with msg ID
@@ -126,54 +128,91 @@ async def handle_post_to_recruitment(character_data):
 async def handle_initiate_burial(character_data):
     """
     Handle INITIATE_BURIAL trigger.
+    Moves character from Character Vault to Cemetery with full ceremony.
     """
     if not bot:
         logger.error("Bot not initialized")
         return
 
     try:
-        # Extract thread ID from URL
+        # 1. Get original vault thread
         url = character_data.get("forum_post_url", "")
         thread_id = None
         if url:
-             try:
-                 thread_id = int(url.split("/")[-1])
-             except ValueError:
-                 logger.error(f"Invalid forum URL format: {url}")
-        
-        if thread_id:
-            thread = bot.get_channel(thread_id) or await bot.fetch_channel(thread_id)
-            if thread:
-                # Move to cemetery channel (if possible/implemented via edit parent)
-                # But Discord API limitations might apply. 
-                # For now, we assume we just post the death story in the thread.
-                # Documentation says: "Move forum post to #cemetery".
-                # To move a thread, we can edit it? 
-                # Not easily in forum channels unless moving between tags or if it's a regular thread.
-                # Actually, can't move forum posts between channels. 
-                # Maybe the design assumes we create a NEW thread in Cemetery and link/archive the old one?
-                # The BLUEPRINT says: "Move forum post: Character Vault -> Cemetery".
-                # If they are different forum channels, we must recreate.
-                # If they are categories, we move.
-                # Assuming separate channels.
-                
-                # Implementation: Create NEW thread in Cemetery, Archive OLD.
-                pass
-                
-                # Mocking the action for the test:
-                # The test mocks thread.send().
-                
-                death_story = character_data.get("death_story", "Fell in battle.")
-                await thread.send(content=f"**The End of a Legend**\n\n{death_story}")
-                
-        # Update status to BURIED
+            try:
+                thread_id = int(url.split("/")[-1])
+            except ValueError:
+                logger.error(f"Invalid forum URL format: {url}")
+                return
+
+        if not thread_id:
+            logger.error("No forum post URL found for burial")
+            return
+
+        vault_thread = bot.get_channel(thread_id) or await bot.fetch_channel(thread_id)
+
+        # 2. Get cemetery forum channel
+        cemetery_channel = bot.get_channel(settings.CEMETERY_CHANNEL_ID)
+        if not cemetery_channel:
+            cemetery_channel = await bot.fetch_channel(settings.CEMETERY_CHANNEL_ID)
+
+        # 3. Create NEW cemetery thread with memorial embed
         char_name = character_data.get("char_name")
-        get_registry().update_character_status(
-            char_name, 
-            "BURIED",
-            forum_post_url=url, # Might update to new URL if we moved it
-            updated_at=datetime.utcnow().isoformat()
+        char_class = character_data.get("class", "Unknown")
+
+        cemetery_embed = build_cemetery_embed(char_name, char_class)
+
+        cemetery_thread_msg = await cemetery_channel.create_thread(
+            name=f"⚰️ {char_name}",
+            content=f"**Here rests {char_name}, whose tale has reached its end.**",
+            embed=cemetery_embed
         )
-        
+
+        # 4. Copy original character embeds to cemetery
+        embed_json = character_data.get("embed_json", "[]")
+        original_embeds = parse_embed_json(embed_json)
+        if original_embeds:
+            await cemetery_thread_msg.thread.send(embeds=original_embeds)
+
+        # 5. Post death story in cemetery
+        death_story = character_data.get("death_story", "Fell in battle.")
+        if death_story:
+            await cemetery_thread_msg.thread.send(content=f"**The End of a Legend**\n\n{death_story}")
+
+        # 6. Archive old vault thread
+        if vault_thread:
+            try:
+                await vault_thread.edit(archived=True, locked=True)
+                logger.info(f"Archived vault thread for {char_name}")
+            except Exception as e:
+                logger.warning(f"Could not archive vault thread: {e}")
+
+        # 7. Update sheets with new cemetery URL and BURIED status
+        get_registry().update_character_status(
+            char_name,
+            "BURIED",
+            forum_post_url=cemetery_thread_msg.thread.jump_url,
+            updated_at=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        )
+
+        # 8. Notify character owner via DM
+        user_id = character_data.get("discord_id")
+        if user_id:
+            try:
+                user_id = int(user_id)
+                user = bot.get_user(user_id) or await bot.fetch_user(user_id)
+                await user.send(
+                    f"⚰️ Your character **{char_name}** has been laid to rest in the Cemetery.\n"
+                    f"Memorial: {cemetery_thread_msg.thread.jump_url}\n\n"
+                    f"*May their legend live on in the hearts of those who knew them.*"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to DM user {user_id}: {e}")
+
+        # 9. Notify @everyone in cemetery thread
+        await cemetery_thread_msg.thread.send("@everyone A hero has fallen. Pay your respects.")
+
+        logger.info(f"Burial ceremony completed for {char_name}")
+
     except Exception as e:
-        logger.error(f"Error in handle_initiate_burial: {e}")
+        logger.error(f"Error in handle_initiate_burial: {e}", exc_info=True)

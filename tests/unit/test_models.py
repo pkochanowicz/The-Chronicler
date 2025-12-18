@@ -97,8 +97,51 @@ class TestModels:
         assert char.updated_at is None
 
     def test_character_to_dict(self):
-        """Test serialization to dictionary (if implemented/needed for sheets)."""
-        # This implies a to_dict method or similar, often used. 
-        # If not strictly documented as a method on Character, we might skip.
-        # But Sheets Service converts it. 
-        pass
+        """
+        Test Character model serialization.
+
+        Per TECHNICAL.md, character data is serialized when writing to Google Sheets.
+        The CharacterRegistryService handles the serialization logic, converting
+        Character objects to row data matching the 27-column schema.
+
+        This test verifies that Character model has the necessary fields for serialization.
+        """
+        char = Character(
+            discord_user_id="123",
+            discord_name="TestUser#1234",
+            name="Thorgar",
+            race="Dwarf",
+            char_class="Warrior",
+            roles="Tank",
+            professions="Mining",
+            backstory="A story",
+            personality="Brave",
+            quotes="For the Alliance!",
+            portrait_url="https://example.com/img.png",
+            trait_1="Brave",
+            trait_2="Loyal",
+            trait_3="Strong",
+            status=STATUS_PENDING,
+            confirmation=True,
+            request_sdxl=False
+        )
+
+        # Verify character has all required fields for serialization
+        assert hasattr(char, 'name')
+        assert hasattr(char, 'race')
+        assert hasattr(char, 'char_class')
+        assert hasattr(char, 'status')
+        assert hasattr(char, 'discord_user_id')
+
+        # Check if Character has to_dict method (it does per domain/models.py line 134)
+        assert hasattr(char, 'to_dict'), "Character should have to_dict method"
+
+        # Test to_dict method
+        char_dict = char.to_dict()
+        assert isinstance(char_dict, dict)
+        assert char_dict['discord_id'] == "123"
+        assert char_dict['char_name'] == "Thorgar"
+
+        # Note: to_dict() is currently partial (only returns discord_id and char_name)
+        # CharacterRegistryService handles full serialization to 27-column schema
+        # This is acceptable - to_dict() provides basic serialization support

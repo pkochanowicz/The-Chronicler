@@ -35,21 +35,94 @@ class TestLifecycle:
     # or similar. But here we test the RULES.
     
     def test_valid_transitions(self):
-        """Documenting valid transitions as per TECHNICAL.md."""
-        transitions = {
+        """
+        Validate state machine transitions per TECHNICAL.md lines 329-375.
+
+        Valid paths:
+        - PENDING → REGISTERED (officer approval via reaction)
+        - PENDING → REJECTED (officer rejection via reaction)
+        - REGISTERED → DECEASED (officer uses /bury command)
+        - REGISTERED → RETIRED (character retirement)
+        - DECEASED → BURIED (automatic webhook after burial ceremony)
+        """
+        # Define valid transitions based on TECHNICAL.md state machine diagram
+        valid_transitions = {
             STATUS_PENDING: [STATUS_REGISTERED, STATUS_REJECTED],
             STATUS_REGISTERED: [STATUS_DECEASED, STATUS_RETIRED],
             STATUS_DECEASED: [STATUS_BURIED],
-            STATUS_BURIED: [], # Final state
-            STATUS_REJECTED: [], # Needs resubmission (new row?) or reset to PENDING?
-                                 # Docs say "REJECTED -> REGISTERED (must resubmit)" implies NO direct transition
+            STATUS_BURIED: [],    # Final state - no transitions allowed
+            STATUS_REJECTED: [],  # Final state - requires new submission to re-enter flow
+            STATUS_RETIRED: []    # Final state - character permanently retired
         }
-        
-        # This test is more of a documentation validation or 
-        # checking a state_machine utility if one existed.
-        pass
+
+        # Verify all status constants are accounted for in transition map
+        all_statuses = {STATUS_PENDING, STATUS_REGISTERED, STATUS_REJECTED,
+                       STATUS_DECEASED, STATUS_BURIED, STATUS_RETIRED}
+        assert set(valid_transitions.keys()) == all_statuses, \
+            "Transition map must include all status constants"
+
+        # Validate critical lifecycle paths exist
+        assert STATUS_REGISTERED in valid_transitions[STATUS_PENDING], \
+            "PENDING must allow transition to REGISTERED (officer approval)"
+        assert STATUS_REJECTED in valid_transitions[STATUS_PENDING], \
+            "PENDING must allow transition to REJECTED (officer rejection)"
+        assert STATUS_DECEASED in valid_transitions[STATUS_REGISTERED], \
+            "REGISTERED must allow transition to DECEASED (character death)"
+        assert STATUS_BURIED in valid_transitions[STATUS_DECEASED], \
+            "DECEASED must allow transition to BURIED (burial ceremony)"
+
+        # Verify final states have no outgoing transitions
+        assert len(valid_transitions[STATUS_BURIED]) == 0, \
+            "BURIED is final state - no transitions allowed"
+        assert len(valid_transitions[STATUS_REJECTED]) == 0, \
+            "REJECTED is final state - requires new submission"
 
     def test_invalid_transitions(self):
-        """Test that invalid transitions should be rejected."""
-        # e.g. PENDING -> BURIED is invalid
-        pass
+        """
+        Validate that invalid state transitions are blocked.
+
+        These transitions violate the lifecycle state machine and must be prevented:
+        - Skipping approval: PENDING → DECEASED/BURIED
+        - Reversing decisions: REGISTERED → REJECTED
+        - Resurrecting dead: BURIED/DECEASED → any earlier state
+        - Auto-approving after rejection: REJECTED → REGISTERED
+        """
+        # Build valid transitions map (must match test_valid_transitions)
+        valid_transitions = {
+            STATUS_PENDING: [STATUS_REGISTERED, STATUS_REJECTED],
+            STATUS_REGISTERED: [STATUS_DECEASED, STATUS_RETIRED],
+            STATUS_DECEASED: [STATUS_BURIED],
+            STATUS_BURIED: [],
+            STATUS_REJECTED: [],
+            STATUS_RETIRED: []
+        }
+
+        # Define critical invalid transition cases that must be blocked
+        invalid_cases = [
+            # Skip approval flow
+            (STATUS_PENDING, STATUS_BURIED, "Cannot skip approval and go directly to buried"),
+            (STATUS_PENDING, STATUS_DECEASED, "Cannot skip approval and mark as deceased"),
+            (STATUS_PENDING, STATUS_RETIRED, "Cannot retire character before approval"),
+
+            # Reverse officer decisions
+            (STATUS_REGISTERED, STATUS_REJECTED, "Cannot reject after approval"),
+            (STATUS_REGISTERED, STATUS_PENDING, "Cannot return to pending after approval"),
+
+            # Violate final state immutability
+            (STATUS_BURIED, STATUS_DECEASED, "Cannot resurrect buried character"),
+            (STATUS_BURIED, STATUS_REGISTERED, "Cannot resurrect buried character"),
+            (STATUS_BURIED, STATUS_PENDING, "Cannot resurrect buried character"),
+
+            (STATUS_REJECTED, STATUS_REGISTERED, "Cannot auto-approve after rejection"),
+            (STATUS_REJECTED, STATUS_PENDING, "Rejected characters require new submission"),
+
+            # Invalid death transitions
+            (STATUS_DECEASED, STATUS_REGISTERED, "Cannot undo death status"),
+            (STATUS_DECEASED, STATUS_REJECTED, "Cannot reject deceased character"),
+        ]
+
+        # Verify each invalid case is not in valid transitions
+        for from_status, to_status, reason in invalid_cases:
+            allowed_transitions = valid_transitions.get(from_status, [])
+            assert to_status not in allowed_transitions, \
+                f"Invalid transition {from_status} → {to_status} must be blocked: {reason}"

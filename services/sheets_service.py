@@ -25,6 +25,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from config.settings import settings
 
+
 logger = logging.getLogger(__name__)
 
 # Scopes required for Google Sheets API
@@ -38,7 +39,6 @@ class CharacterRegistryService:
     Service for logging registered characters to Google Sheets.
     Enforces the 27-column schema defined in TECHNICAL.md.
     """
-
     SHEET_NAME = "Character_Submissions"
 
     # Schema definition (ordered 27 columns)
@@ -135,11 +135,24 @@ class CharacterRegistryService:
             logger.error(f"Schema validation failed: {e}")
             raise
 
+    def _get_timestamp(self) -> str:
+        """Generate consistent ISO 8601 timestamp (UTC, no microseconds)."""
+        return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
     def log_character(self, character_data: Dict[str, Any]) -> bool:
         """
         Log a new character to the sheet.
         Expects a dictionary with keys matching the 27 columns (or aliases).
+        Returns False if character name already exists (duplicate prevention).
         """
+        # Check for duplicate character name
+        char_name = character_data.get("char_name", "")
+        if char_name:
+            existing = self.get_character_by_name(char_name)
+            if existing:
+                logger.warning(f"Character '{char_name}' already exists, rejecting duplicate registration")
+                return False
+
         try:
             # Prepare row
             row = [""] * len(self.SCHEMA_COLUMNS) # Initialize with empty strings, assuming schema columns match headers order
@@ -150,9 +163,9 @@ class CharacterRegistryService:
             # Use max index from mapping to determine row size
             max_idx = max(self.column_mapping.values())
             row = [""] * (max_idx + 1)
-            
+
             # Populate auto-fields if missing
-            now = datetime.utcnow().isoformat()
+            now = self._get_timestamp()
             if "timestamp" not in character_data:
                 character_data["timestamp"] = now
             if "created_at" not in character_data:
@@ -175,8 +188,6 @@ class CharacterRegistryService:
             
         except Exception as e:
             logger.error(f"Error logging character: {e}")
-            raise # Re-raise so caller knows it failed (tests expect failure on error?)
-                  # Actually the interface says return bool.
             return False
 
     def update_character_status(self, char_name: str, new_status: str, **kwargs) -> bool:
@@ -207,10 +218,10 @@ class CharacterRegistryService:
             status_col_idx = self.column_mapping.get("status")
             if status_col_idx is not None:
                 self.sheet.update_cell(row_num, status_col_idx + 1, new_status)
-                
+
             # Update additional fields
             # Always update updated_at
-            kwargs["updated_at"] = datetime.utcnow().isoformat()
+            kwargs["updated_at"] = self._get_timestamp()
             
             for key, value in kwargs.items():
                 col_name = self.FIELD_MAPPING.get(key, key) # Fallback to key itself
@@ -246,4 +257,13 @@ class CharacterRegistryService:
             return [r for r in records if str(r.get("discord_id")) == str(discord_id)]
         except Exception as e:
             logger.error(f"Error getting characters for user {discord_id}: {e}")
+            return []
+
+    def get_all_characters(self) -> List[Dict[str, str]]:
+        """Retrieve all characters from the sheet."""
+        try:
+            records = self.sheet.get_all_records()
+            return records
+        except Exception as e:
+            logger.error(f"Error getting all characters: {e}")
             return []

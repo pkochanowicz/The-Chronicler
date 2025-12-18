@@ -16,7 +16,17 @@
 
 import pytest
 import datetime
+import os
+import base64
 from unittest.mock import MagicMock, AsyncMock
+
+# -----------------------------------------------------------------------------
+# GLOBAL TEST SETUP
+# -----------------------------------------------------------------------------
+# Force valid dummy credentials for all tests to prevent Settings init crash.
+# This must run before 'config.settings' is imported by any test module.
+os.environ["GOOGLE_CREDENTIALS_B64"] = base64.b64encode(b'{"type": "service_account"}').decode('utf-8')
+# -----------------------------------------------------------------------------
 
 @pytest.fixture
 def mock_settings(mocker):
@@ -105,3 +115,8 @@ def valid_classes():
 @pytest.fixture
 def valid_roles():
     return ["Tank", "Healer", "Melee DPS", "Ranged DPS", "Support"]
+
+@pytest.fixture
+def mock_complete_character_data(sample_character_data):
+    """Alias for sample_character_data to satisfy test requirements."""
+    return sample_character_data
