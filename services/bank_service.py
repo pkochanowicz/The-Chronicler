@@ -1,83 +1,141 @@
-# in services/bank_service.py
+# services/bank_service.py
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Optional, Any
 from datetime import datetime, timezone
-import gspread
-from google.oauth2.service_account import Credentials
-from config.settings import settings
+import uuid
+from services.sheets_service import google_sheets_service
 
 logger = logging.getLogger(__name__)
 
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
-
-class BankService:
-    SHEET_NAME = "Bank"
+class GuildBankService:
+    """
+    Service for managing the Guild Bank using a one-member-to-many-items relationship.
+    Schema: item_id, item_name, item_category, quantity, deposited_by, deposited_by_name,
+            deposited_at, withdrawn_by, withdrawn_by_name, withdrawn_at, notes, status
+    """
+    SHEET_NAME = "Guild_Bank"
     SCHEMA_COLUMNS = [
-        "timestamp", "member", "transaction_type", "item", "quantity", "notes"
+        "item_id", "item_name", "item_category", "quantity",
+        "deposited_by", "deposited_by_name", "deposited_at",
+        "withdrawn_by", "withdrawn_by_name", "withdrawn_at",
+        "notes", "status"
     ]
+    
+    # Column mapping for easier access
+    COL_MAPPING = {col: i for i, col in enumerate(SCHEMA_COLUMNS)}
 
     def __init__(self):
-        self.client = None
         self.sheet = None
-        self._connect_to_sheet()
-        self._validate_schema()
+        self._initialize_sheet()
 
-    def _connect_to_sheet(self):
-        try:
-            creds = Credentials.from_service_account_file(
-                settings.GOOGLE_CREDENTIALS_FILE, scopes=SCOPES
-            )
-            self.client = gspread.authorize(creds)
-            workbook = self.client.open_by_key(settings.GOOGLE_SHEET_ID)
-            self.sheet = workbook.worksheet(self.SHEET_NAME)
-            logger.info(f"Successfully connected to Google Sheets (worksheet: {self.SHEET_NAME})")
-        except gspread.exceptions.WorksheetNotFound:
-            logger.warning(f"Worksheet '{self.SHEET_NAME}' not found. Creating it now.")
-            self._create_sheet(workbook)
-        except Exception as e:
-            logger.error(f"Failed to connect to Google Sheets: {e}")
-            raise
-
-    def _create_sheet(self, workbook):
-        try:
-            self.sheet = workbook.add_worksheet(title=self.SHEET_NAME, rows="100", cols="20")
-            self.sheet.append_row(self.SCHEMA_COLUMNS)
-            logger.info(f"Worksheet '{self.SHEET_NAME}' created successfully.")
-        except Exception as e:
-            logger.error(f"Failed to create worksheet '{self.SHEET_NAME}': {e}")
-            raise
-
-    def _validate_schema(self):
-        try:
-            headers = self.sheet.row_values(1)
-            if not headers or headers != self.SCHEMA_COLUMNS:
-                raise ValueError(f"Sheet '{self.SHEET_NAME}' has incorrect schema. Expected: {self.SCHEMA_COLUMNS}")
-            logger.info("Bank schema validation successful")
-        except Exception as e:
-            logger.error(f"Bank schema validation failed: {e}")
-            raise
+    def _initialize_sheet(self):
+        """Initializes the bank sheet using GoogleSheetsService."""
+        self.sheet = google_sheets_service._get_or_create_sheet(
+            self.SHEET_NAME, self.SCHEMA_COLUMNS
+        )
+        # Re-validate schema to be safe
+        google_sheets_service._validate_schema(self.sheet, self.SCHEMA_COLUMNS)
 
     def _get_timestamp(self) -> str:
         return datetime.now(timezone.utc).isoformat()
 
-    def log_transaction(self, member: str, transaction_type: str, item: str, quantity: int, notes: str = "") -> bool:
+    def deposit_item(self, item_name: str, quantity: int, depositor_id: str, depositor_name: str, category: str = "Other", notes: str = "") -> bool:
+        """
+        Deposits an item into the guild bank.
+        Generates a unique item_id.
+        """
         try:
+            item_id = str(uuid.uuid4())
             timestamp = self._get_timestamp()
-            row = [timestamp, member, transaction_type, item, quantity, notes]
+            
+            row_data = {
+                "item_id": item_id,
+                "item_name": item_name,
+                "item_category": category,
+                "quantity": quantity,
+                "deposited_by": str(depositor_id),
+                "deposited_by_name": depositor_name,
+                "deposited_at": timestamp,
+                "withdrawn_by": "",
+                "withdrawn_by_name": "",
+                "withdrawn_at": "",
+                "notes": notes,
+                "status": "AVAILABLE"
+            }
+            
+            # Convert dict to row list based on schema order
+            row = [str(row_data.get(col, "")) for col in self.SCHEMA_COLUMNS]
+            
             self.sheet.append_row(row)
-            logger.info(f"Logged bank transaction: {member}, {transaction_type}, {quantity}x {item}")
+            logger.info(f"Deposited: {quantity}x {item_name} by {depositor_name} (ID: {item_id})")
             return True
         except Exception as e:
-            logger.error(f"Error logging bank transaction: {e}")
+            logger.error(f"Error depositing item: {e}")
             return False
 
-    def get_all_transactions(self) -> List[Dict[str, Any]]:
+    def withdraw_item(self, item_id: str, withdrawer_id: str, withdrawer_name: str) -> bool:
+        """
+        Withdraws an item (marks it as WITHDRAWN).
+        """
         try:
-            records = self.sheet.get_all_records()
-            return records
+            # Find the row with the item_id
+            # Fetch all records is expensive but robust for finding by ID without knowing row num
+            # Optimization: Use search? gspread find function.
+            cell = self.sheet.find(item_id, in_column=self.COL_MAPPING["item_id"] + 1)
+            
+            if not cell:
+                logger.warning(f"Item ID {item_id} not found for withdrawal.")
+                return False
+            
+            row_num = cell.row
+            
+            # Update withdrawn fields
+            timestamp = self._get_timestamp()
+            
+            updates = [
+                (self.COL_MAPPING["withdrawn_by"], str(withdrawer_id)),
+                (self.COL_MAPPING["withdrawn_by_name"], withdrawer_name),
+                (self.COL_MAPPING["withdrawn_at"], timestamp),
+                (self.COL_MAPPING["status"], "WITHDRAWN")
+            ]
+            
+            # Batch update or individual cell updates? Individual is easier logic.
+            for col_idx, val in updates:
+                self.sheet.update_cell(row_num, col_idx + 1, val)
+                
+            logger.info(f"Withdrawn item {item_id} by {withdrawer_name}")
+            return True
+
         except Exception as e:
-            logger.error(f"Error getting all bank transactions: {e}")
+            logger.error(f"Error withdrawing item {item_id}: {e}")
+            return False
+
+    def get_available_items(self) -> List[Dict[str, Any]]:
+        """Returns all items with status 'AVAILABLE'."""
+        try:
+            all_records = self.sheet.get_all_records()
+            return [item for item in all_records if item.get("status") == "AVAILABLE"]
+        except Exception as e:
+            logger.error(f"Error fetching available items: {e}")
             return []
+
+    def get_member_deposits(self, discord_id: str) -> List[Dict[str, Any]]:
+        """Returns items deposited by a specific member."""
+        try:
+            all_records = self.sheet.get_all_records()
+            return [item for item in all_records if str(item.get("deposited_by")) == str(discord_id)]
+        except Exception as e:
+            logger.error(f"Error fetching deposits for {discord_id}: {e}")
+            return []
+
+    def get_member_withdrawals(self, discord_id: str) -> List[Dict[str, Any]]:
+        """Returns items withdrawn by a specific member."""
+        try:
+            all_records = self.sheet.get_all_records()
+            return [item for item in all_records if str(item.get("withdrawn_by")) == str(discord_id)]
+        except Exception as e:
+            logger.error(f"Error fetching withdrawals for {discord_id}: {e}")
+            return []
+
+# Global instance
+guild_bank_service = GuildBankService()

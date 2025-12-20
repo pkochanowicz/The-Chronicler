@@ -17,11 +17,10 @@
 """
 Validators for domain models and fields.
 """
-from typing import List, Optional
+from typing import List, Optional, Dict
 import re
 from domain.models import CLASS_DATA
 from domain.talent_data import TALENT_DATA
-
 
 class ValidationError(Exception):
     """Raised when validation fails."""
@@ -184,8 +183,9 @@ def validate_talents(char_class: str, level: int, talents: Dict[str, int]) -> bo
 
     class_talent_trees = TALENT_DATA[char_class]
     
-    # Keep track of points spent per tree for implicit level checks later
+    talents_chosen_info = {} # To store full info of chosen talents
     points_spent_per_tree = {tree_name: 0 for tree_name in class_talent_trees.keys()}
+    total_talent_points_spent = 0
 
     for talent_name, ranks_spent in talents.items():
         found_talent = False
@@ -200,22 +200,51 @@ def validate_talents(char_class: str, level: int, talents: Dict[str, int]) -> bo
                 if ranks_spent > talent_info["max_rank"]:
                     raise ValidationError(f"Talent '{talent_name}' has max rank {talent_info['max_rank']}, but {ranks_spent} ranks were specified.")
                 
-                # Validate implied level (simple check for now)
-                # All talents are currently default to level 10.
-                # More complex tier-based level validation will come later.
+                # Validate implied character level for the talent
                 if level < talent_info["level"]:
                     raise ValidationError(f"Talent '{talent_name}' requires character level {talent_info['level']}, but character is level {level}.")
                 
-                # Add to points spent in this tree
+                # Store full talent info and add to points spent in this tree
+                talents_chosen_info[talent_name] = talent_info
                 points_spent_per_tree[tree_name] += ranks_spent
+                total_talent_points_spent += ranks_spent
                 break
         
         if not found_talent:
             raise ValidationError(f"Talent '{talent_name}' is not a valid talent for class '{char_class}'.")
 
-    # Future enhancement: Add checks for total talent points spent vs. character level
-    # Future enhancement: Add checks for tier unlocking based on points_spent_per_tree
-    # Future enhancement: Add checks for talent prerequisites
+    # --- Second Pass: Validate Total Talent Points, Tier Unlocks, and Prerequisites ---
+
+    # 1. Validate Total Talent Points Spent
+    total_talent_points_available = max(0, level - 9) # First point at level 10
+    if total_talent_points_spent > total_talent_points_available:
+        raise ValidationError(f"Character level {level} can only have {total_talent_points_available} talent points, but {total_talent_points_spent} were spent.")
+    
+    for talent_name, talent_info in talents_chosen_info.items():
+        tree_name = None
+        # Find the tree this talent belongs to
+        for t_name, t_talents in class_talent_trees.items():
+            if talent_name in t_talents:
+                tree_name = t_name
+                break
+        if not tree_name: # Should not happen if found_talent was true in first pass
+            continue
+        
+        # 2. Validate Tier Unlocks (points_in_tree_required)
+        # points_in_tree_required is (tier - 1) * 5
+        required_points_for_tier = (talent_info['tier'] - 1) * 5
+        if points_spent_per_tree[tree_name] < required_points_for_tier:
+            raise ValidationError(f"Talent '{talent_name}' (Tier {talent_info['tier']}) requires {required_points_for_tier} points spent in {tree_name} tree, but only {points_spent_per_tree[tree_name]} were spent.")
+
+        # 3. Validate Prerequisites (requires)
+        for prereq in talent_info.get("requires", []):
+            prereq_name = prereq["talent"]
+            prereq_ranks_needed = prereq["ranks"]
+            
+            if prereq_name not in talents:
+                raise ValidationError(f"Talent '{talent_name}' requires prerequisite talent '{prereq_name}' (Rank {prereq_ranks_needed}). '{prereq_name}' not chosen.")
+            
+            if talents[prereq_name] < prereq_ranks_needed:
+                raise ValidationError(f"Talent '{talent_name}' requires prerequisite talent '{prereq_name}' with at least {prereq_ranks_needed} ranks, but only {talents[prereq_name]} ranks were spent.")
 
     return True
-

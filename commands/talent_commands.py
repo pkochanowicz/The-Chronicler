@@ -1,12 +1,10 @@
 # commands/talent_commands.py
 import discord
 from discord import app_commands
-from services.sheets_service import CharacterRegistryService
-from domain.validators import validate_talents, ValidationError
-import json # for parsing talents JSON string
+from services.sheets_service import google_sheets_service
 
 # Instantiate the service
-sheets_service = CharacterRegistryService()
+sheets_service = google_sheets_service
 
 class TalentCommands(app_commands.Group):
     def __init__(self, *args, **kwargs):

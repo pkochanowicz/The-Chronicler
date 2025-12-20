@@ -22,8 +22,7 @@ import asyncio
 import logging
 from config.settings import settings
 from services.discord_client import bot
-from services.webhook_handler import start_webhook_server
-from services.sheets_service import CharacterRegistryService
+from services.sheets_service import google_sheets_service
 from mcp.server import run_mcp_server
 
 # Configure logging
@@ -57,12 +56,12 @@ def main():
         # Set setup_hook
         bot.setup_hook = setup_hook
 
-        # Create services
-        sheets_service = CharacterRegistryService()
+        # Use global sheets_service
+        # sheets_service = CharacterRegistryService() # Removed
 
         async def run_mcp():
             try:
-                await run_mcp_server(bot, sheets_service)
+                await run_mcp_server(bot, google_sheets_service) # Pass global service
             except Exception as e:
                 logger.error(f"Failed to start MCP server: {e}")
 

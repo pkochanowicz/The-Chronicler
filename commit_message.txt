@@ -1,0 +1,37 @@
+feat: Implement MCP, Portrait Forge, Guild Bank, and Dynamic Talent Validation
+
+This commit introduces significant new features and integrations:
+
+- **Model Context Protocol (MCP) Integration:**
+    - Developed a custom MCP server within The Chronicler using aiohttp.
+    - Implemented API key authentication for secure access.
+    - Added MCP tools: `get_character_sheet`, `send_discord_message`, `list_discord_channels`.
+    - Integrated the MCP server to run alongside the main bot application.
+
+- **Feature: The Portrait Forge:**
+    - Implemented a `get_portrait_prompt` method in `domain/models.py` to generate AI image prompts based on character data when no portrait URL is provided.
+
+- **Feature: The Guild Bank:**
+    - Created a new `BankService` in `services/bank_service.py` for managing guild assets via a dedicated Google Sheet tab.
+    - Introduced Discord commands `/bank deposit` and `/bank view` in `commands/bank_commands.py`.
+
+- **Feature: Dynamic Talent Validation:**
+    - Extracted simplified talent data (names, ranks, default levels) for all classes (Warrior, Paladin, Hunter, Rogue, Priest, Shaman, Mage, Warlock, Druid) from Turtle WoW talent builder.
+    - Populated `domain/talent_data.py` with this structured data.
+    - Updated `domain/validators.py` with the `validate_talents` function, expecting talent name and ranks.
+    - Modified `domain/models.py` to include a `talents` field in the `Character` dataclass.
+    - Updated `services/sheets_service.py` to handle serialization/deserialization of talent data (as JSON) to/from Google Sheets.
+    - Created a new Discord command `/talent audit` in `commands/talent_commands.py` for build validation.
+
+- **Graphics Storage Integration:**
+    - Added `GRAPHICS_STORAGE_CHANNEL_ID` to `config/settings.py` for dedicated image storage.
+    - Implemented `post_image_to_graphics_storage` MCP tool to upload images to Discord and return CDN links.
+
+- **General Enhancements & Bug Fixes:**
+    - Fixed Discord interaction token expiration errors in registration and burial flows by deferring interactions.
+    - Ensured entire `/register_character` flow uses ephemeral messages for privacy.
+    - Added display for character traits in embeds.
+    - Updated internal datetime calls from `utcnow()` to `now(timezone.utc)`.
+    - Integrated `bank_commands` and `talent_commands` into `main.py`.
+
+The changelog (`docs/CHANGELOG.md`) has been updated to reflect these changes under versions 1.1.8 and 1.1.9.

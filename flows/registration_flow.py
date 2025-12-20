@@ -447,13 +447,68 @@ class RegistrationFlow(InteractiveFlow):
     async def step_portrait(self):
         """Step 11: Portrait."""
         view = View()
-        # Option 1: URL input (Modal?) or Message?
-        # Option 2: Default
-        # Option 3: Request AI
-
-        btn_url = Button(label="Enter Image URL", style=discord.ButtonStyle.primary)
+        
+        btn_upload = Button(label="Upload Image", style=discord.ButtonStyle.primary, emoji="🖼️")
+        btn_url = Button(label="Enter Image URL", style=discord.ButtonStyle.secondary) # Changed to secondary
         btn_default = Button(label="Use Placeholder", style=discord.ButtonStyle.secondary)
         btn_ai = Button(label="Request AI Portrait", style=discord.ButtonStyle.success)
+
+        async def upload_callback(interaction: discord.Interaction):
+            await interaction.response.send_message("Please upload your image directly to this chat within the next 60 seconds. Make sure it's an image file!", ephemeral=True)
+            view.stop() # Stop the current view so we can wait for a message
+
+            try:
+                # Listen for messages from the specific user in the specific channel/DM
+                def check(m):
+                    return m.author == self.user and m.channel == interaction.channel and m.attachments
+
+                msg = await self.bot.wait_for('message', check=check, timeout=60.0)
+                
+                if msg.attachments:
+                    attachment = msg.attachments[0] # Take the first attachment
+                    if attachment.content_type and attachment.content_type.startswith('image/'):
+                        # Call MCP tool to store image
+                        # MCPTools instance needs settings, discord_client.
+                        # We can't directly instantiate MCPTools here as it requires a sheets_service.
+                        # Instead, we will directly call the function from mcp.tools,
+                        # passing the necessary settings and bot instance.
+                        from mcp.tools import MCPTools # Import locally to avoid circular
+                        mcp_tools_instance = MCPTools(settings, self.bot, None) # sheets_service not needed here
+                        
+                        thread_name = f"Portrait: {self.data['char_name']} ({self.data['discord_id']})"
+                        response = await mcp_tools_instance.post_image_to_graphics_storage(attachment.url, attachment.filename, thread_name=thread_name)
+
+
+                        if response["success"]:
+                            self.data["portrait_url"] = response["cdn_url"]
+                            self.data["request_sdxl"] = False
+                            await interaction.followup.send("✅ Image uploaded and stored successfully! Your portrait URL has been updated.", ephemeral=True)
+                        else:
+                            await interaction.followup.send(f"❌ Failed to store image: {response['error']}\nUsing default placeholder instead.", ephemeral=True)
+                            self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                            self.data["request_sdxl"] = False
+                    else:
+                        await interaction.followup.send("❌ That was not an image file. Using default placeholder instead.", ephemeral=True)
+                        self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                        self.data["request_sdxl"] = False
+                else:
+                    await interaction.followup.send("❌ No image attached. Using default placeholder instead.", ephemeral=True)
+                    self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                    self.data["request_sdxl"] = False
+
+            except asyncio.TimeoutError:
+                await interaction.followup.send("⏰ You took too long to upload an image. Using default placeholder instead.", ephemeral=True)
+                self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                self.data["request_sdxl"] = False
+            except Exception as e:
+                logger.error(f"Error during image upload in registration flow: {e}")
+                await interaction.followup.send("❌ An unexpected error occurred during image upload. Using default placeholder instead.", ephemeral=True)
+                self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                self.data["request_sdxl"] = False
+            
+            # The flow continues after image handling
+            # Ensure the step_portrait method fully completes its execution
+            # The view.stop() already called will handle the waiting part.
 
         async def url_callback(interaction):
             modal = SingleInputModal(title="Portrait URL", label="URL", placeholder="https://...")
@@ -488,10 +543,12 @@ class RegistrationFlow(InteractiveFlow):
             await interaction.response.defer()
             view.stop()
 
+        btn_upload.callback = upload_callback
         btn_url.callback = url_callback
         btn_default.callback = default_callback
         btn_ai.callback = ai_callback
 
+        view.add_item(btn_upload)
         view.add_item(btn_url)
         view.add_item(btn_default)
         view.add_item(btn_ai)

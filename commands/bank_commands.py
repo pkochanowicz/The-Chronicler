@@ -1,52 +1,79 @@
 import discord
 from discord import app_commands
-from services.bank_service import BankService
-
-bank_service = BankService()
+from services.bank_service import guild_bank_service
 
 class BankCommands(app_commands.Group):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, name="bank", description="Commands for the guild bank.")
 
     @app_commands.command(name="deposit", description="Deposit an item into the guild bank.")
-    async def deposit(self, interaction: discord.Interaction, item: str, quantity: int, notes: str = ""):
-        member = interaction.user.display_name
-        if bank_service.log_transaction(member, "deposit", item, quantity, notes):
-            await interaction.response.send_message(f"Successfully deposited {quantity}x {item} into the guild bank.", ephemeral=True)
+    async def deposit(self, interaction: discord.Interaction, item: str, quantity: int, category: str = "Other", notes: str = ""):
+        await interaction.response.defer(ephemeral=True)
+        
+        depositor_id = str(interaction.user.id)
+        depositor_name = interaction.user.display_name
+        
+        if guild_bank_service.deposit_item(item, quantity, depositor_id, depositor_name, category, notes):
+            await interaction.followup.send(f"✅ Successfully deposited **{quantity}x {item}** into the guild bank.", ephemeral=True)
         else:
-            await interaction.response.send_message("Failed to deposit item into the guild bank.", ephemeral=True)
+            await interaction.followup.send("❌ Failed to deposit item into the guild bank.", ephemeral=True)
 
-    @app_commands.command(name="view", description="View the guild bank's inventory.")
+    @app_commands.command(name="withdraw", description="Withdraw an item from the guild bank (by Item ID).")
+    async def withdraw(self, interaction: discord.Interaction, item_id: str):
+        await interaction.response.defer(ephemeral=True)
+        
+        withdrawer_id = str(interaction.user.id)
+        withdrawer_name = interaction.user.display_name
+        
+        if guild_bank_service.withdraw_item(item_id, withdrawer_id, withdrawer_name):
+             await interaction.followup.send(f"✅ Successfully withdrawn item ID `{item_id}`.", ephemeral=True)
+        else:
+             await interaction.followup.send(f"❌ Failed to withdraw item `{item_id}`. Check if ID exists and is available.", ephemeral=True)
+
+    @app_commands.command(name="view", description="View available items in the guild bank.")
     async def view(self, interaction: discord.Interaction):
-        transactions = bank_service.get_all_transactions()
-        if not transactions:
-            await interaction.response.send_message("The guild bank is empty.", ephemeral=True)
+        await interaction.response.defer(ephemeral=True)
+        items = guild_bank_service.get_available_items()
+        
+        if not items:
+            await interaction.followup.send("The guild bank is empty.", ephemeral=True)
             return
 
-        embed = discord.Embed(title="Guild Bank Inventory", color=discord.Color.gold())
-        
-        # This is a very simple view, just showing the last 10 transactions.
-        # A proper implementation would aggregate the items.
+        # Simple aggregation for view
         inventory = {}
-        for transaction in transactions:
-            item = transaction.get("item")
-            quantity = transaction.get("quantity", 0)
-            transaction_type = transaction.get("transaction_type")
+        for item in items:
+            name = item.get("item_name")
+            qty = int(item.get("quantity", 0))
+            inventory[name] = inventory.get(name, 0) + qty
 
-            if transaction_type == "deposit":
-                inventory[item] = inventory.get(item, 0) + quantity
-            elif transaction_type == "withdrawal":
-                inventory[item] = inventory.get(item, 0) - quantity
-
-        for item, quantity in inventory.items():
-            if quantity > 0:
-                embed.add_field(
-                    name=item,
-                    value=f"Quantity: {quantity}",
-                    inline=True
-                )
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        embed = discord.Embed(title="🏦 Guild Bank Inventory", color=discord.Color.gold())
+        description = ""
+        for name, qty in inventory.items():
+            description += f"• **{name}**: {qty}\n"
+        
+        if len(description) > 4000:
+            description = description[:3900] + "... (truncated)"
+            
+        embed.description = description
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        
+    @app_commands.command(name="mydeposits", description="View items you have deposited.")
+    async def mydeposits(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        items = guild_bank_service.get_member_deposits(str(interaction.user.id))
+        
+        if not items:
+             await interaction.followup.send("You haven't deposited any items.", ephemeral=True)
+             return
+             
+        embed = discord.Embed(title=f"📦 Deposits by {interaction.user.display_name}", color=discord.Color.blue())
+        desc = ""
+        for item in items[:20]: # Limit to last 20
+             status_icon = "✅" if item.get("status") == "AVAILABLE" else "❌"
+             desc += f"{status_icon} **{item.get('quantity')}x {item.get('item_name')}** (ID: `{item.get('item_id')}`)\n"
+        
+        embed.description = desc
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 async def setup(bot):
     bot.tree.add_command(BankCommands())

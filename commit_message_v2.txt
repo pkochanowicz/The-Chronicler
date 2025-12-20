@@ -1,0 +1,11 @@
+feat: Release v2.0.0 Ascension
+
+Major update introducing:
+- **Guild Bank:** Complete 12-column schema, service, and commands.
+- **Talent System:** Dynamic validation against Classic+ rules, `Talent_Library` sheet support.
+- **MCP Integration:** `post_image_to_graphics_storage` with threading, server setup.
+- **Graphics Storage:** Automated image upload to Discord channels.
+- **Schema Reformation:** Full transition to 27-column character schema.
+- **Documentation:** Overhauled README, TECHNICAL, USER_GUIDE, and MASTER_BLUEPRINT_V2.
+
+For Azeroth!
