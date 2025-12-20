@@ -44,7 +44,7 @@ CHARACTER_SCHEMA_COLUMNS = [
     "trait_1", "trait_2", "trait_3", "status", "confirmation", "request_sdxl", 
     "recruitment_msg_id", "forum_post_url", "reviewed_by", "embed_json", 
     "death_cause", "death_story", "created_at", "updated_at", "notes",
-    "talents"
+    "talents_json"
 ]
 CHARACTER_FIELD_MAPPING = {
     "timestamp": "timestamp", "discord_id": "discord_id", "discord_name": "discord_name",
@@ -57,7 +57,7 @@ CHARACTER_FIELD_MAPPING = {
     "forum_post_url": "forum_post_url", "reviewed_by": "reviewed_by",
     "embed_json": "embed_json", "death_cause": "death_cause", "death_story": "death_story",
     "created_at": "created_at", "updated_at": "updated_at", "notes": "notes",
-    "talents": "talents"
+    "talents": "talents_json"
 }
 
 # Talent Library Sheet specific constants
@@ -142,10 +142,30 @@ class GoogleSheetsService: # Renamed class
         """Validates that a worksheet's header matches the expected schema."""
         current_headers = [h.strip() for h in worksheet.row_values(1)]
         if current_headers != expected_schema_columns:
-            raise ValueError(
-                f"Schema mismatch for worksheet '{worksheet.title}'. "
-                f"Expected: {expected_schema_columns}, Got: {current_headers}"
+            expected_set = set(expected_schema_columns)
+            current_set = set(current_headers)
+            
+            missing_columns = expected_set - current_set
+            extra_columns = current_set - expected_set
+            
+            error_msg = (
+                f"Schema mismatch for worksheet '{worksheet.title}'.\n"
+                f"  - Expected Headers: {expected_schema_columns}\n"
+                f"  - Actual Headers:   {current_headers}\n"
             )
+            if missing_columns:
+                error_msg += f"  - Missing Columns: {sorted(list(missing_columns))}\n"
+            if extra_columns:
+                error_msg += f"  - Extra Columns: {sorted(list(extra_columns))}\n"
+
+            # Check for ordering issues
+            if not missing_columns and not extra_columns:
+                for i, (expected, actual) in enumerate(zip(expected_schema_columns, current_headers)):
+                    if expected != actual:
+                        error_msg += f"  - Order Mismatch at index {i}: Expected '{expected}', but got '{actual}'.\n"
+                        break 
+            
+            raise ValueError(error_msg)
         logger.info(f"Schema validation successful for worksheet '{worksheet.title}'.")
 
 
@@ -298,11 +318,11 @@ class GoogleSheetsService: # Renamed class
 
     def _process_character_record(self, record: Dict[str, str]) -> Dict[str, Any]: # Renamed helper
         """Processes a single character record from the sheet, deserializing JSON fields."""
-        if "talents" in record and record["talents"]:
+        if "talents_json" in record and record["talents_json"]:
             try:
-                record["talents"] = json.loads(record["talents"])
+                record["talents"] = json.loads(record["talents_json"])
             except json.JSONDecodeError:
-                logger.warning(f"Failed to decode talents for character {record.get('char_name')}. Defaulting to empty dict.")
+                logger.warning(f"Failed to decode talents_json for character {record.get('char_name')}. Defaulting to empty dict.")
                 record["talents"] = {} 
         else:
             record["talents"] = {} 
