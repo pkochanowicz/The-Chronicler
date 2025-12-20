@@ -25,7 +25,7 @@ from aiohttp import web
 from config.settings import settings
 from utils.embed_parser import parse_embed_json, build_cemetery_embed
 from services.sheets_service import CharacterRegistryService
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -111,13 +111,19 @@ async def handle_post_to_recruitment(character_data):
         await message.add_reaction(settings.APPROVE_EMOJI)
         await asyncio.sleep(0.5)  # 500ms delay to avoid burst rate limits
         await message.add_reaction(settings.REJECT_EMOJI)
-        
-        # Update sheets with msg ID
-        get_registry().update_character_status(
-            character_data.get("char_name"),
-            character_data.get("status"), # Keep existing status
-            recruitment_msg_id=str(message.id)
+
+        # Save recruitment message ID back to Google Sheets
+        char_name = character_data.get("char_name")
+        discord_id = character_data.get("discord_id")
+
+        get_registry().update_character_field(
+            char_name=char_name,
+            discord_id=discord_id,
+            field_name="recruitment_msg_id",
+            value=str(message.id)
         )
+
+        logger.info(f"✅ Recruitment post created for {char_name}, msg_id={message.id}")
         
         try:
             user_id = int(character_data.get("discord_id", 0))
@@ -197,7 +203,7 @@ async def handle_initiate_burial(character_data):
             char_name,
             "BURIED",
             forum_post_url=cemetery_thread_msg.thread.jump_url,
-            updated_at=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            updated_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         )
 
         # 8. Notify character owner via DM

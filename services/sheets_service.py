@@ -20,9 +20,10 @@ Handles all interactions with the Character_Submissions Google Sheet.
 """
 import logging
 from typing import List, Dict, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import gspread
 from google.oauth2.service_account import Credentials
+import json
 from config.settings import settings
 
 
@@ -47,7 +48,8 @@ class CharacterRegistryService:
         "roles", "professions", "backstory", "personality", "quotes", "portrait_url", 
         "trait_1", "trait_2", "trait_3", "status", "confirmation", "request_sdxl", 
         "recruitment_msg_id", "forum_post_url", "reviewed_by", "embed_json", 
-        "death_cause", "death_story", "created_at", "updated_at", "notes"
+        "death_cause", "death_story", "created_at", "updated_at", "notes",
+        "talents_json"
     ]
 
     # Field mapping: domain_model_field -> sheet_column
@@ -81,7 +83,8 @@ class CharacterRegistryService:
         "death_story": "death_story",
         "created_at": "created_at",
         "updated_at": "updated_at",
-        "notes": "notes"
+        "notes": "notes",
+        "talents": "talents_json"
     }
 
     def __init__(self):
@@ -137,7 +140,7 @@ class CharacterRegistryService:
 
     def _get_timestamp(self) -> str:
         """Generate consistent ISO 8601 timestamp (UTC, no microseconds)."""
-        return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def log_character(self, character_data: Dict[str, Any]) -> bool:
         """
@@ -180,6 +183,9 @@ class CharacterRegistryService:
                     # Handle boolean conversion
                     if isinstance(value, bool):
                         value = "TRUE" if value else "FALSE"
+                    # Handle talents conversion to JSON string
+                    if key == "talents" and value is not None:
+                        value = json.dumps(value) # Convert dict to JSON string
                     row[idx] = str(value) if value is not None else ""
             
             self.sheet.append_row(row)
@@ -238,32 +244,113 @@ class CharacterRegistryService:
             logger.error(f"Error updating character {char_name}: {e}")
             return False
 
-    def get_character_by_name(self, char_name: str) -> Optional[Dict[str, str]]:
+    def _process_record(self, record: Dict[str, str]) -> Dict[str, Any]:
+        """Processes a single record from the sheet, deserializing JSON fields."""
+        if "talents_json" in record and record["talents_json"]:
+            try:
+                record["talents"] = json.loads(record["talents_json"])
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to decode talents_json for character {record.get('char_name')}")
+                record["talents"] = {} # Default to empty dict on error
+        else:
+            record["talents"] = {} # Ensure talents key exists, even if empty
+        return record
+
+    def get_character_by_name(self, char_name: str) -> Optional[Dict[str, Any]]:
         """Retrieve character data by name."""
         try:
             records = self.sheet.get_all_records()
             for record in records:
                 if record.get("char_name") == char_name:
-                    return record
+                    return self._process_record(record) # Use helper here
             return None
         except Exception as e:
             logger.error(f"Error getting character {char_name}: {e}")
             return None
 
-    def get_characters_by_user(self, discord_id: str) -> List[Dict[str, str]]:
+    def get_characters_by_user(self, discord_id: str) -> List[Dict[str, Any]]:
         """Retrieve all characters for a Discord user."""
         try:
             records = self.sheet.get_all_records()
-            return [r for r in records if str(r.get("discord_id")) == str(discord_id)]
+            processed_records = [self._process_record(r) for r in records if str(r.get("discord_id")) == str(discord_id)]
+            return processed_records
         except Exception as e:
             logger.error(f"Error getting characters for user {discord_id}: {e}")
             return []
 
-    def get_all_characters(self) -> List[Dict[str, str]]:
+    def get_all_characters(self) -> List[Dict[str, Any]]:
         """Retrieve all characters from the sheet."""
         try:
             records = self.sheet.get_all_records()
-            return records
+            processed_records = [self._process_record(r) for r in records]
+            return processed_records
         except Exception as e:
             logger.error(f"Error getting all characters: {e}")
             return []
+
+    def update_character_field(
+        self,
+        char_name: str,
+        discord_id: str,
+        field_name: str,
+        value: Any
+    ) -> bool:
+        """
+        Update a single field for a specific character.
+
+        Args:
+            char_name: Character name
+            discord_id: Discord user ID
+            field_name: Name of field to update (must be in schema)
+            value: New value for the field
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Find the character's row
+            all_records = self.sheet.get_all_records()
+
+            for idx, record in enumerate(all_records):
+                if (record.get('char_name') == char_name and
+                    str(record.get('discord_id')) == str(discord_id)):
+
+                    # Row number (idx + 2 because: 1=header, idx is 0-based)
+                    row_number = idx + 2
+
+                    # Get column index for the field
+                    col_name = self.FIELD_MAPPING.get(field_name, field_name)
+                    if col_name not in self.column_mapping:
+                        logger.error(f"Field '{field_name}' not in schema")
+                        return False
+
+                    col_index = self.column_mapping[col_name] + 1  # +1 for 1-based
+
+                    # Convert boolean values
+                    if isinstance(value, bool):
+                        value = "TRUE" if value else "FALSE"
+                    # Convert talents to JSON string
+                    if field_name == "talents" and value is not None:
+                        value = json.dumps(value)
+
+                    # Update the cell
+                    self.sheet.update_cell(row_number, col_index, str(value))
+
+                    # Update updated_at timestamp
+                    updated_at_col = self.column_mapping.get("updated_at")
+                    if updated_at_col is not None:
+                        self.sheet.update_cell(
+                            row_number,
+                            updated_at_col + 1,
+                            self._get_timestamp()
+                        )
+
+                    logger.info(f"Updated {field_name}={value} for {char_name}")
+                    return True
+
+            logger.warning(f"Character not found: {char_name} ({discord_id})")
+            return False
+
+        except Exception as e:
+            logger.error(f"Error updating field: {e}")
+            return False

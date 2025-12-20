@@ -20,6 +20,8 @@ Validators for domain models and fields.
 from typing import List, Optional
 import re
 from domain.models import CLASS_DATA
+from domain.talent_data import TALENT_DATA
+
 
 class ValidationError(Exception):
     """Raised when validation fails."""
@@ -170,4 +172,50 @@ def sanitize_input(text: str) -> str:
     # Additional sanitization can be added here if needed (e.g. escaping HTML/Markdown)
     
     return sanitized
+
+
+def validate_talents(char_class: str, level: int, talents: Dict[str, int]) -> bool:
+    """
+    Validate selected talents based on class and level.
+    talents: A dictionary of {talent_name: ranks_spent}
+    """
+    if char_class not in TALENT_DATA:
+        raise ValidationError(f"Invalid class for talent validation: {char_class}")
+
+    class_talent_trees = TALENT_DATA[char_class]
+    
+    # Keep track of points spent per tree for implicit level checks later
+    points_spent_per_tree = {tree_name: 0 for tree_name in class_talent_trees.keys()}
+
+    for talent_name, ranks_spent in talents.items():
+        found_talent = False
+        for tree_name, tree_talents in class_talent_trees.items():
+            if talent_name in tree_talents:
+                talent_info = tree_talents[talent_name]
+                found_talent = True
+                
+                # Validate ranks spent
+                if ranks_spent <= 0:
+                    raise ValidationError(f"Ranks spent for talent '{talent_name}' must be positive.")
+                if ranks_spent > talent_info["max_rank"]:
+                    raise ValidationError(f"Talent '{talent_name}' has max rank {talent_info['max_rank']}, but {ranks_spent} ranks were specified.")
+                
+                # Validate implied level (simple check for now)
+                # All talents are currently default to level 10.
+                # More complex tier-based level validation will come later.
+                if level < talent_info["level"]:
+                    raise ValidationError(f"Talent '{talent_name}' requires character level {talent_info['level']}, but character is level {level}.")
+                
+                # Add to points spent in this tree
+                points_spent_per_tree[tree_name] += ranks_spent
+                break
+        
+        if not found_talent:
+            raise ValidationError(f"Talent '{talent_name}' is not a valid talent for class '{char_class}'.")
+
+    # Future enhancement: Add checks for total talent points spent vs. character level
+    # Future enhancement: Add checks for tier unlocking based on points_spent_per_tree
+    # Future enhancement: Add checks for talent prerequisites
+
+    return True
 

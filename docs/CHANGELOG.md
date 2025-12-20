@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.7] - 2025-12-20
+
+### Fixed
+- **Deprecation Warnings:** Replaced all instances of the deprecated `datetime.datetime.utcnow()` with the timezone-aware `datetime.datetime.now(datetime.UTC)`. This resolves all `DeprecationWarning`s during tests and ensures future compatibility.
+
+### Added
+- **Deployment Checklist:** Created `docs/DEPLOYMENT_CHECKLIST.md` to provide a comprehensive checklist for verifying deployments.
+- **Testing Results:** Updated `TESTING_RESULTS.md` with the full report from the "QUEST II: BATTLE HARDENING" deployment and verification.
+
+### Changed
+- **Deployment:** The application was successfully deployed to Fly.io, and the webhook is confirmed to be live and secure.
+
+---
+
+## [1.1.8] - 2025-12-20
+
+### Added
+- **MCP Server:** Implemented a new MCP (Model Context Protocol) server within The Chronicler.
+  - The server is built with `aiohttp` and runs alongside the main bot.
+  - It exposes a secure API for "Trailwardens" (LLM terminal users) to interact with the bot and access guild data.
+  - The API is protected by an API key.
+- **MCP Tools:** Implemented the following tools for the MCP server:
+  - `get_character_sheet`: Get a character's data from the Google Sheet.
+  - `send_discord_message`: Send a message to a Discord channel.
+  - `list_discord_channels`: List all channels in the guild.
+
+### Changed
+- **Configuration:** Added `MCP_PORT` and `MCP_API_KEY` to the settings.
+- **Main Application:** The main application now starts the MCP server alongside the Discord bot and the webhook server.
+
+---
+
+## [1.1.9] - 2025-12-20
+
+### Added
+- **Portrait Forge Hook:** Implemented a `get_portrait_prompt` method in `domain/models.py` for AI-generated portraits, which generates a prompt based on character race, class, and description if no portrait URL is provided.
+- **Guild Bank Feature:** Introduced a new `BankService` in `services/bank_service.py` to manage guild assets in a dedicated Google Sheet tab.
+- **Bank Commands:** Added `/bank deposit` and `/bank view` commands to `commands/bank_commands.py` for tracking guild assets.
+- **Dynamic Talent Validation Feature:** Implemented `validate_talents` logic in `domain/validators.py` to enforce WoW Classic+ talent restrictions based on class and level.
+  - Extracted comprehensive talent data for all classes (Warrior, Paladin, Hunter, Rogue, Priest, Shaman, Mage, Warlock, Druid) from Turtle WoW talent builder.
+  - Populated `domain/talent_data.py` with this structured talent information, including `level` and `max_rank`.
+  - Updated `domain/models.py` to include a `talents` field in the `Character` dataclass.
+  - Updated `services/sheets_service.py` to handle the serialization and deserialization of talent data (as JSON) for storage and retrieval in Google Sheets.
+  - Created a new Discord command `/talent audit` in `commands/talent_commands.py` to allow users to validate their character's talent builds against the game's rules.
+
+### Changed
+- **Main Application:** Updated `main.py` to load the new `bank_commands` and `talent_commands` extensions.
+- **Character Data Schema:** Modified `CharacterRegistryService` in `services/sheets_service.py` to include a `talents_json` column for storing talent data, and adjusted related serialization/deserialization logic.
+
+---
+
+## [Unreleased]
+
+### Fixed
+- **Registration Flow Critical Bug:** Fixed Discord interaction token expiration errors on ALL registration steps
+  - **Root Cause:** `/register_character` command never acknowledged the initial interaction before starting the flow
+  - **Fix:** Added `await interaction.response.defer(ephemeral=True)` immediately after permission check
+  - **Impact:** All 12 registration steps now work correctly (previously failed on first question and from step 6 onwards)
+  - Also added `on_submit()` callbacks to Modal classes for proper modal submission acknowledgment
+  - Fixes "Something went wrong" and "Coś poszło nie tak" errors throughout the flow
+- **Burial Flow Bug:** Fixed same interaction token expiration issue in `/bury` command
+  - Added immediate interaction deferral before starting BurialFlow
+  - Prevents ceremony from failing with timeout errors
+- **Missing recruitment_msg_id:** Fixed recruitment message ID not being saved to Google Sheets
+  - Created `CharacterRegistryService.update_character_field()` method for single-field updates
+  - Updated webhook handler to save recruitment message ID when posting to #recruitment
+  - Ensures proper tracking of recruitment posts for officer approval workflow
+- **Missing "Chapter Six" Display:** Added three traits display to character embeds
+  - Character traits (trait_1, trait_2, trait_3) now appear prominently in character sheets
+  - Styled with ⚡ symbols: "⚡ Brave • Loyal • Stubborn ⚡"
+  - Traits appear between header info and lore sections in Quick Reference embed
+
+### Changed
+- **Registration Privacy Enhancement:** Entire `/register_character` flow now uses ephemeral messages (DM-only conversation)
+  - All interaction responses and followup messages are private to the registering user
+  - Added privacy notice in introduction embed: "*This conversation is private - only you can see it.*"
+  - Prevents character creation process from being visible in public channels
+
+### Added
+- **Documentation:** Added officer reaction emoji documentation to `.env.example`
+  - Documented ✅ (APPROVE_EMOJI) and ❌ (REJECT_EMOJI) as hardcoded constants
+  - Clarified these emojis are used for recruitment post approval/rejection
+  - Note: Emojis are not configurable via environment variables
+
+---
+
 ## [1.1.6] - 2025-12-20
 
 ### Deployment

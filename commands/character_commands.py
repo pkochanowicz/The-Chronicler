@@ -43,10 +43,14 @@ class CharacterCommands(commands.Cog):
         # If strict check is needed:
         if not any(role_id in user_roles for role_id in allowed_roles):
              await interaction.response.send_message(
-                 "❌ You do not have the required role to register a character.", 
+                 "❌ You do not have the required role to register a character.",
                  ephemeral=True
              )
              return
+
+        # CRITICAL: Defer interaction immediately to prevent token expiration
+        # The registration flow is long-running, so we acknowledge within 3 seconds
+        await interaction.response.defer(ephemeral=True)
 
         flow = RegistrationFlow(interaction)
         await flow.start()

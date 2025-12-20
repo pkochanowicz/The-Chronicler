@@ -40,7 +40,7 @@ def mock_settings(mocker):
 def sample_character_data():
     """Returns a dictionary with valid sample character data (27 columns)"""
     return {
-        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "discord_id": "123456789",
         "discord_name": "TestUser#1234",
         "char_name": "Thorgar",
@@ -64,8 +64,8 @@ def sample_character_data():
         "embed_json": '[{"title": "Thorgar"}]',
         "death_cause": None,
         "death_story": None,
-        "created_at": datetime.datetime.utcnow().isoformat(),
-        "updated_at": datetime.datetime.utcnow().isoformat(),
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "notes": "Test notes"
     }
 

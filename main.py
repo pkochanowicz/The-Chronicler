@@ -23,6 +23,8 @@ import logging
 from config.settings import settings
 from services.discord_client import bot
 from services.webhook_handler import start_webhook_server
+from services.sheets_service import CharacterRegistryService
+from mcp.server import run_mcp_server
 
 # Configure logging
 logging.basicConfig(
@@ -37,6 +39,8 @@ async def setup_hook():
     extensions = [
         "commands.character_commands",
         "commands.officer_commands",
+        "commands.bank_commands",
+        "commands.talent_commands",
         "handlers.reaction_handler"
     ]
     
@@ -53,23 +57,28 @@ def main():
         # Set setup_hook
         bot.setup_hook = setup_hook
 
-        # Start webhook server in background loop when bot starts
-        # We hook into on_ready or just use loop.create_task before run?
-        # create_task works if loop is running. bot.run() starts loop.
-        # We can do it in setup_hook or on_ready.
-        # But setup_hook is better.
-        
+        # Create services
+        sheets_service = CharacterRegistryService()
+
+        async def run_mcp():
+            try:
+                await run_mcp_server(bot, sheets_service)
+            except Exception as e:
+                logger.error(f"Failed to start MCP server: {e}")
+
         async def run_webhook():
             try:
                 await start_webhook_server(bot)
             except Exception as e:
                 logger.error(f"Failed to start webhook server: {e}")
 
-        # Inject webhook task into setup_hook
+        # Inject webhook and mcp tasks into setup_hook
         original_setup_hook = bot.setup_hook
         async def combined_setup_hook():
-            await original_setup_hook()
+            if original_setup_hook:
+                await original_setup_hook()
             bot.loop.create_task(run_webhook())
+            bot.loop.create_task(run_mcp())
         
         bot.setup_hook = combined_setup_hook
 

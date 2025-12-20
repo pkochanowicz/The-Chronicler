@@ -64,6 +64,7 @@ class Settings:
         self.RECRUITMENT_CHANNEL_ID: int = int(os.getenv("RECRUITMENT_CHANNEL_ID", "0"))
         self.FORUM_CHANNEL_ID: int = int(os.getenv("FORUM_CHANNEL_ID", "0"))
         self.CEMETERY_CHANNEL_ID: int = int(os.getenv("CEMETERY_CHANNEL_ID", "0"))
+        self.GRAPHICS_STORAGE_CHANNEL_ID: int = int(os.getenv("GRAPHICS_STORAGE_CHANNEL_ID", "0")) # New
 
         # Guild Member Role IDs (FIXED: all uppercase)
         self.WANDERER_ROLE_ID: int = int(os.getenv("WANDERER_ROLE_ID", "0"))
@@ -85,6 +86,10 @@ class Settings:
 
         # Webhook Security
         self.WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
+
+        # MCP Server
+        self.MCP_PORT: int = int(os.getenv("MCP_PORT", "8081"))
+        self.MCP_API_KEY: str = os.getenv("MCP_API_KEY", "")
 
         # Deployment
         self.PORT: int = int(os.getenv("PORT", "8080"))
@@ -222,6 +227,8 @@ class Settings:
             ("FORUM_CHANNEL_ID", self.FORUM_CHANNEL_ID),
             ("GOOGLE_SHEET_ID", self.GOOGLE_SHEET_ID),
             ("WEBHOOK_SECRET", self.WEBHOOK_SECRET),
+            ("MCP_API_KEY", self.MCP_API_KEY),
+            ("GRAPHICS_STORAGE_CHANNEL_ID", self.GRAPHICS_STORAGE_CHANNEL_ID), # New
         ]
 
         missing = [name for name, value in required_fields if not value]

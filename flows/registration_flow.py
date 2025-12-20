@@ -108,15 +108,16 @@ class RegistrationFlow(InteractiveFlow):
                 "An elderly dwarf with a magnificent beard looks up from his writing desk.*\n\n"
                 "Greetings, brave soul! I am **Chronicler Thaldrin**, Keeper of Knowledge.\n"
                 "You seek to inscribe your legend into our eternal archives? Splendid!\n\n"
-                "But first—a formality. May I record your Discord identity for our records?"
+                "But first—a formality. May I record your Discord identity for our records?\n\n"
+                "*This conversation is private - only you can see it.*"
             ),
             color=0xC0C0C0
         )
-        
+
         view = View()
         yes_btn = Button(label="Yes, record my identity", style=discord.ButtonStyle.green, emoji="✅")
         no_btn = Button(label="No, remain anonymous", style=discord.ButtonStyle.red, emoji="❌")
-        
+
         async def yes_callback(interaction):
             # Validate user object
             if not self.user or not self.user.id:
@@ -134,18 +135,18 @@ class RegistrationFlow(InteractiveFlow):
             self.data["discord_name"] = str(self.user)
             await interaction.response.defer()
             view.stop()
-            
+
         async def no_callback(interaction):
             self.data["consent"] = False
             await interaction.response.send_message("Very well. The archives require an identity. Perhaps another time.", ephemeral=True)
             view.stop()
-            
+
         yes_btn.callback = yes_callback
         no_btn.callback = no_callback
         view.add_item(yes_btn)
         view.add_item(no_btn)
-        
-        await self.send_or_update(embed=embed, view=view)
+
+        await self.send_or_update(embed=embed, view=view, ephemeral=True)
         await view.wait()
 
     async def step_name(self):
@@ -153,20 +154,22 @@ class RegistrationFlow(InteractiveFlow):
         await self.interaction.followup.send(
             "📜 **CHAPTER ONE: THE NAME**\n\n"
             "Every legend begins with a name. **What shall the bards call your hero?**\n"
-            "*(Type your character's full name)*"
+            "*(Type your character's full name)*",
+            ephemeral=True
         )
-        
+
         msg = await self.wait_for_message()
         name = msg.content.strip()
-        
+
         if len(name) > 100:
-            await self.interaction.followup.send("That name is too long! The tome cannot contain it. Try again.")
+            await self.interaction.followup.send("That name is too long! The tome cannot contain it. Try again.", ephemeral=True)
             await self.step_name() # Retry
             return
 
         self.data["char_name"] = name
         await self.interaction.followup.send(
-            f"*The quill dances across the parchment, etching '{name.upper()}' in bold runes.*"
+            f"*The quill dances across the parchment, etching '{name.upper()}' in bold runes.*",
+            ephemeral=True
         )
 
     async def step_race(self):
@@ -188,13 +191,15 @@ class RegistrationFlow(InteractiveFlow):
         await self.interaction.followup.send(
             "⚔️ **CHAPTER TWO: THE BLOODLINE**\n\n"
             "From which people dost thou hail? Choose your heritage:",
-            view=view
+            view=view,
+            ephemeral=True
         )
         await view.wait()
-        
+
         # Flavor text
         await self.interaction.followup.send(
-            f"Ahh, a {self.data['race']}! The ancestors smile upon you."
+            f"Ahh, a {self.data['race']}! The ancestors smile upon you.",
+            ephemeral=True
         )
 
     async def step_class(self):
@@ -222,12 +227,14 @@ class RegistrationFlow(InteractiveFlow):
         await self.interaction.followup.send(
             "🔮 **CHAPTER THREE: THE CALLING**\n\n"
             "What path has fate woven for thee? Choose your class:",
-            view=view
+            view=view,
+            ephemeral=True
         )
         await view.wait()
-        
+
         await self.interaction.followup.send(
-            f"⚔️ A {self.data['class']}! Steel and fury!"
+            f"⚔️ A {self.data['class']}! Steel and fury!",
+            ephemeral=True
         )
 
     async def step_roles(self):
@@ -253,7 +260,8 @@ class RegistrationFlow(InteractiveFlow):
         await self.interaction.followup.send(
             "🎭 **CHAPTER FOUR: THE MANY MASKS**\n\n"
             "What roles do you fulfill when battle calls? (Select at least 1):",
-            view=view
+            view=view,
+            ephemeral=True
         )
         await view.wait()
 
@@ -313,7 +321,8 @@ class RegistrationFlow(InteractiveFlow):
         await self.interaction.followup.send(
             "🔨 **CHAPTER FIVE: THE CRAFTS**\n\n"
             "Do you practice any trades? (Optional):",
-            view=view
+            view=view,
+            ephemeral=True
         )
         await view.wait()
 
@@ -322,29 +331,30 @@ class RegistrationFlow(InteractiveFlow):
         # Using messages since Modal requires Interaction response, but we are in followup flow.
         # Can we send a Modal in followup? NO. Modals respond to Interactions.
         # We can send a button "Enter Traits" that triggers a Modal.
-        
+
         view = View()
         btn = Button(label="Inscribe Traits", style=discord.ButtonStyle.primary, emoji="⚡")
-        
+
         async def btn_callback(interaction):
             # This interaction opens the Modal
             modal = TraitsModal(title="The Three Traits")
             await interaction.response.send_modal(modal)
             await modal.wait()
-            
+
             self.data["trait_1"] = modal.trait1.value
             self.data["trait_2"] = modal.trait2.value
             self.data["trait_3"] = modal.trait3.value
-            
+
             view.stop()
-            
+
         btn.callback = btn_callback
         view.add_item(btn)
-        
+
         await self.interaction.followup.send(
             "⚡ **CHAPTER SIX: THE THREE TRAITS**\n\n"
             "Inscribe three words that define your hero's outer nature (e.g. Brave, Loyal, Stubborn).",
-            view=view
+            view=view,
+            ephemeral=True
         )
         await view.wait()
 
@@ -353,21 +363,22 @@ class RegistrationFlow(InteractiveFlow):
         # Similar pattern: Button -> Modal
         view = View()
         btn = Button(label="Write My Tale", style=discord.ButtonStyle.primary, emoji="📖")
-        
+
         async def btn_callback(interaction):
             modal = LongTextModal(title="Your Tale", label="Backstory", placeholder="Once upon a time...")
             await interaction.response.send_modal(modal)
             await modal.wait()
             self.data["backstory"] = modal.text_input.value
             view.stop()
-            
+
         btn.callback = btn_callback
         view.add_item(btn)
-        
+
         await self.interaction.followup.send(
             "📖 **CHAPTER SEVEN: THE TALE**\n\n"
             "Where do you come from? What shaped you?",
-            view=view
+            view=view,
+            ephemeral=True
         )
         await view.wait()
 
@@ -376,28 +387,29 @@ class RegistrationFlow(InteractiveFlow):
         view = View()
         btn = Button(label="Describe Personality", style=discord.ButtonStyle.primary)
         skip = Button(label="Skip", style=discord.ButtonStyle.secondary)
-        
+
         async def btn_callback(interaction):
             modal = LongTextModal(title="Inner Soul", label="Personality", placeholder="I am...")
             await interaction.response.send_modal(modal)
             await modal.wait()
             self.data["personality"] = modal.text_input.value
             view.stop()
-            
+
         async def skip_callback(interaction):
             self.data["personality"] = ""
             await interaction.response.defer()
             view.stop()
-            
+
         btn.callback = btn_callback
         skip.callback = skip_callback
         view.add_item(btn)
         view.add_item(skip)
-        
+
         await self.interaction.followup.send(
             "💭 **CHAPTER EIGHT: THE INNER SOUL** (Optional)\n"
             "Describe your inner thoughts and nature.",
-            view=view
+            view=view,
+            ephemeral=True
         )
         await view.wait()
 
@@ -406,28 +418,29 @@ class RegistrationFlow(InteractiveFlow):
         view = View()
         btn = Button(label="Record Quotes", style=discord.ButtonStyle.primary)
         skip = Button(label="Skip", style=discord.ButtonStyle.secondary)
-        
+
         async def btn_callback(interaction):
             modal = LongTextModal(title="Famous Words", label="Quotes", placeholder="For the Alliance!|Victory or Death!")
             await interaction.response.send_modal(modal)
             await modal.wait()
             self.data["quotes"] = modal.text_input.value
             view.stop()
-            
+
         async def skip_callback(interaction):
             self.data["quotes"] = ""
             await interaction.response.defer()
             view.stop()
-            
+
         btn.callback = btn_callback
         skip.callback = skip_callback
         view.add_item(btn)
         view.add_item(skip)
-        
+
         await self.interaction.followup.send(
             "💬 **CHAPTER NINE: THE WORDS** (Optional)\n"
             "Battle cries or catchphrases? (Separate multiple with |)",
-            view=view
+            view=view,
+            ephemeral=True
         )
         await view.wait()
 
@@ -437,11 +450,11 @@ class RegistrationFlow(InteractiveFlow):
         # Option 1: URL input (Modal?) or Message?
         # Option 2: Default
         # Option 3: Request AI
-        
+
         btn_url = Button(label="Enter Image URL", style=discord.ButtonStyle.primary)
         btn_default = Button(label="Use Placeholder", style=discord.ButtonStyle.secondary)
         btn_ai = Button(label="Request AI Portrait", style=discord.ButtonStyle.success)
-        
+
         async def url_callback(interaction):
             modal = SingleInputModal(title="Portrait URL", label="URL", placeholder="https://...")
             await interaction.response.send_modal(modal)
@@ -468,25 +481,26 @@ class RegistrationFlow(InteractiveFlow):
             self.data["request_sdxl"] = False
             await interaction.response.defer()
             view.stop()
-            
+
         async def ai_callback(interaction):
             self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL  # Will be replaced by AI later
             self.data["request_sdxl"] = True
             await interaction.response.defer()
             view.stop()
-            
+
         btn_url.callback = url_callback
         btn_default.callback = default_callback
         btn_ai.callback = ai_callback
-        
+
         view.add_item(btn_url)
         view.add_item(btn_default)
         view.add_item(btn_ai)
-        
+
         await self.interaction.followup.send(
             "🎨 **CHAPTER TEN: THE VISAGE** (Optional)\n"
             "Provide a portrait for your character.",
-            view=view
+            view=view,
+            ephemeral=True
         )
         await view.wait()
 
@@ -539,7 +553,8 @@ class RegistrationFlow(InteractiveFlow):
             "📋 **THE CHRONICLE PREVIEW**\n"
             "Does this look correct?",
             embeds=embeds,
-            view=view
+            view=view,
+            ephemeral=True
         )
         await view.wait()
 
@@ -548,7 +563,7 @@ class RegistrationFlow(InteractiveFlow):
         # Write to sheets
         try:
             embed_json = serialize_embeds(self.data["preview_embeds"])
-            
+
             char_data = {
                 "discord_id": self.data["discord_id"],
                 "discord_name": self.data["discord_name"],
@@ -569,17 +584,18 @@ class RegistrationFlow(InteractiveFlow):
                 "request_sdxl": self.data.get("request_sdxl", False),
                 "embed_json": embed_json
             }
-            
+
             registry = CharacterRegistryService()
             success = registry.log_character(char_data)
-            
+
             if success:
                 await self.interaction.followup.send(
                     "✨ **THE INSCRIPTION IS COMPLETE!** ✨\n\n"
-                    "Your character has been submitted for review. Watch for a DM!"
+                    "Your character has been submitted for review. Watch for a DM!",
+                    ephemeral=True
                 )
                 # Trigger webhook logic locally if needed, or rely on Google Script to trigger it?
-                # The BLUEPRINT says: 
+                # The BLUEPRINT says:
                 # [AT THIS MOMENT:] -> Google Sheets row created -> Webhook triggers
                 # So we just write to sheet. The Google Script triggers the bot's webhook endpoint.
                 # Bot doesn't need to call handle_post_to_recruitment directly here.
@@ -587,11 +603,11 @@ class RegistrationFlow(InteractiveFlow):
                 # But in production, it's Path B.
                 # So we are done.
             else:
-                await self.interaction.followup.send("❌ Failed to write to archives. Please alert the officers.")
-                
+                await self.interaction.followup.send("❌ Failed to write to archives. Please alert the officers.", ephemeral=True)
+
         except Exception as e:
             logger.error(f"Finalization error: {e}")
-            await self.interaction.followup.send("❌ Critical error during inscription.")
+            await self.interaction.followup.send("❌ Critical error during inscription.", ephemeral=True)
 
     async def handle_timeout(self):
         if self.message:
@@ -605,14 +621,26 @@ class TraitsModal(Modal):
     trait2 = TextInput(label="Trait 2", max_length=50, required=True)
     trait3 = TextInput(label="Trait 3", max_length=50, required=True)
 
+    async def on_submit(self, interaction: discord.Interaction):
+        """Acknowledge modal submission to prevent Discord timeout errors."""
+        await interaction.response.defer()
+
 class LongTextModal(Modal):
     def __init__(self, title, label, placeholder):
         super().__init__(title=title)
         self.text_input = TextInput(label=label, style=discord.TextStyle.paragraph, max_length=1024, placeholder=placeholder, required=True)
         self.add_item(self.text_input)
 
+    async def on_submit(self, interaction: discord.Interaction):
+        """Acknowledge modal submission to prevent Discord timeout errors."""
+        await interaction.response.defer()
+
 class SingleInputModal(Modal):
     def __init__(self, title, label, placeholder):
         super().__init__(title=title)
         self.text_input = TextInput(label=label, max_length=200, placeholder=placeholder, required=True)
         self.add_item(self.text_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        """Acknowledge modal submission to prevent Discord timeout errors."""
+        await interaction.response.defer()

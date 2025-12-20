@@ -256,10 +256,19 @@ def build_character_embeds(character: Character) -> List[discord.Embed]:
             f"**Race:** {character.race}\n"
             f"**Class:** {character.char_class}\n"
             f"**Role:** {character.roles}\n"
-            f"**Professions:** {character.professions}"
+            f"**Professions:** {character.professions or 'None'}"
         ),
         inline=False
     )
+
+    # The Three Traits (Chapter Six)
+    if character.trait_1 and character.trait_2 and character.trait_3:
+        traits_display = f"⚡ {character.trait_1} • {character.trait_2} • {character.trait_3} ⚡"
+        quick_ref.add_field(
+            name="━━━━━━━━━━━━━━━━━━━━",
+            value=traits_display,
+            inline=False
+        )
 
     quick_ref.set_footer(text="Azeroth Bound • Character Registry")
     embeds.append(quick_ref)

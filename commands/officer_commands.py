@@ -40,10 +40,14 @@ class OfficerCommands(commands.Cog):
         
         if not any(role_id in user_roles for role_id in allowed_roles):
              await interaction.response.send_message(
-                 "❌ You are not authorized to perform the Rite of Remembrance.", 
+                 "❌ You are not authorized to perform the Rite of Remembrance.",
                  ephemeral=True
              )
              return
+
+        # CRITICAL: Defer interaction immediately to prevent token expiration
+        # The burial ceremony is an interactive flow, acknowledge within 3 seconds
+        await interaction.response.defer(ephemeral=True)
 
         flow = BurialFlow(interaction)
         await flow.start()

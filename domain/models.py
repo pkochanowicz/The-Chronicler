@@ -107,6 +107,9 @@ class Character:
     trait_2: str = ""
     trait_3: str = ""
     
+    # Talents
+    talents: Dict[str, int] = field(default_factory=dict) # {talent_name: ranks_spent}
+    
     # Lifecycle
     status: str = STATUS_PENDING
     confirmation: bool = False
@@ -131,6 +134,30 @@ class Character:
     # Admin
     notes: str = ""
     
+    def get_portrait_prompt(self) -> Optional[str]:
+        """
+        Generates a prompt for an AI image generator if no portrait URL is provided.
+        The prompt is based on the character's race, class, and physical description.
+        """
+        if self.portrait_url:
+            return None
+
+        prompt_parts = [
+            f"A portrait of a {self.race} {self.char_class},",
+            "in the style of World of Warcraft concept art.",
+        ]
+
+        description = ""
+        if self.personality:
+            description += f"Personality: {self.personality}. "
+        if self.trait_1:
+            description += f"Traits: {self.trait_1}, {self.trait_2}, {self.trait_3}. "
+        
+        if description:
+            prompt_parts.append(f"Physical and character description: {description.strip()}")
+
+        return " ".join(prompt_parts)
+
     def to_dict(self) -> dict:
         """Convert to dictionary for Google Sheets (partial, or full if needed by services)."""
         # This is a helper, though SheetsService typically constructs the row.
