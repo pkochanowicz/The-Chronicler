@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.6] - 2025-12-20
+
+### Deployment
+- Successfully deployed the application to fly.io.
+
+### Changed
+- **fly.toml**: Changed `primary_region` from `waw` to `arn` to resolve deployment errors due to the deprecation of the `waw` region.
+
+### Fixed
+- **Dockerfile.uv**: Modified the Dockerfile to copy `README.md` and `poetry.lock` before installing dependencies, fixing a `FileNotFoundError` during the build process.
+
+### Added
+- **fly.toml**: Modified the build configuration to use `Dockerfile.uv` for deployments, switching from a buildpack-based to a Dockerfile-based deployment strategy.
+
+---
+
+## [1.1.5] - 2025-12-20
+
+### Fixed
+- **fly.toml**: Removed explicit buildpack definition (`buildpacks = ["gcr.io/paketo-buildpacks/python"]`) to resolve deployment failures on Fly.io. The `paketobuildpacks/builder:base` builder will now auto-detect the required Python buildpack, avoiding issues with deprecated `gcr.io` registries.
+
+---
+
 ## [1.1.4] - 2025-12-20
 
 ### Added

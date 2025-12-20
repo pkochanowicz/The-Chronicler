@@ -38,12 +38,17 @@ def get_registry():
         registry = CharacterRegistryService()
     return registry
 
+async def health_handler(request):
+    """Health check endpoint for Fly.io and other platforms."""
+    return web.Response(text="OK", status=200)
+
 async def start_webhook_server(discord_bot):
     """Start the aiohttp webhook server."""
     global bot
     bot = discord_bot
     app = web.Application()
     app.router.add_post('/webhook', handle_webhook)
+    app.router.add_get('/health', health_handler)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', 8080)
