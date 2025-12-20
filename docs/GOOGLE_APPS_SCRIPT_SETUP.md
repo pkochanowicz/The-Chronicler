@@ -93,13 +93,16 @@ const COL_RECRUITMENT_MSG_ID = 18; // Column 19 (recruitment_msg_id)
 
 /**
  * onChange trigger - Fires when sheet is edited
+ * Can also be called manually for testing (event parameter optional)
  */
 function onSheetChange(e) {
   try {
     Logger.log("Sheet changed detected, analyzing...");
 
-    // Get the Character_Submissions sheet explicitly by name
-    var sheet = e.source.getSheetByName(SHEET_NAME);
+    // Get the active spreadsheet and target sheet by name
+    // This works both for real onChange events and manual testing
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = spreadsheet.getSheetByName(SHEET_NAME);
 
     if (!sheet) {
       Logger.log("ERROR: Sheet '" + SHEET_NAME + "' not found!");
@@ -217,6 +220,21 @@ function testWebhook() {
   } else {
     Logger.log("❌ Webhook test FAILED");
   }
+}
+
+/**
+ * Test the onChange trigger logic without requiring a real sheet change
+ * This tests the trigger detection and webhook sending logic
+ */
+function testTriggerLogic() {
+  Logger.log("Testing trigger logic...");
+
+  // Call onSheetChange without event object (now supported!)
+  // This will process all rows in Character_Submissions sheet
+  onSheetChange();
+
+  Logger.log("✅ Trigger logic test complete - check logs above for webhook activity");
+  Logger.log("Note: This will send real webhooks if trigger conditions are met!");
 }
 ```
 
@@ -466,6 +484,8 @@ const BACKUP_FOLDER_ID = "your_actual_folder_id_here";
 
 ### Test 1: Webhook Connectivity
 
+Tests basic webhook endpoint connectivity without processing sheet data.
+
 1. In Apps Script editor, select **testWebhook** function
 2. Click **Run** (play button)
 3. Check **Execution log** (View → Logs)
@@ -485,7 +505,40 @@ Response text: OK
 
 ---
 
-### Test 2: Backup Functionality
+### Test 2: Trigger Logic (NEW!)
+
+Tests the onChange trigger logic without requiring manual sheet edits. This verifies that your trigger detection and webhook sending logic works correctly.
+
+1. In Apps Script editor, select **testTriggerLogic** function
+2. Click **Run** (play button)
+3. Check **Execution log** (View → Logs)
+
+**What this does:**
+- Processes all rows in Character_Submissions sheet
+- Checks each row for trigger conditions (PENDING + confirmation, DECEASED status, etc.)
+- Sends real webhooks if conditions are met
+- Works without needing a mock event object (thanks to refactored `onSheetChange()`)
+
+**Expected output:**
+```
+Testing trigger logic...
+Sheet changed detected, analyzing...
+✅ Trigger logic test complete - check logs above for webhook activity
+```
+
+**⚠️ IMPORTANT:**
+- This will send **real webhooks** if trigger conditions are met in your sheet
+- Use on test data only, or ensure your bot is ready to handle the webhooks
+- Having multiple sheet tabs (like Character_Registry alongside Character_Submissions) is perfectly fine—only Character_Submissions is processed
+
+**Why this test is important:**
+- Previously, calling `onSheetChange()` without a proper event object caused: `TypeError: Cannot read properties of undefined (reading 'source')`
+- The refactored code now uses `SpreadsheetApp.getActiveSpreadsheet()` instead of relying on `e.source`
+- This makes testing reliable and removes dependency on mock event construction
+
+---
+
+### Test 3: Backup Functionality
 
 1. Select **testBackup** function
 2. Click **Run**
@@ -497,7 +550,7 @@ Response text: OK
 
 ---
 
-### Test 3: End-to-End Webhook Flow
+### Test 4: End-to-End Webhook Flow
 
 1. In Discord, use `/register_character`
 2. Complete the flow and confirm

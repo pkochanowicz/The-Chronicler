@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.3] - 2025-12-20
+
+### Added
+- **docs/GOOGLE_APPS_SCRIPT_SETUP.md** - New `testTriggerLogic()` function for testing onChange trigger logic without manual sheet edits
+
+### Changed
+- **docs/GOOGLE_APPS_SCRIPT_SETUP.md** - Refactored `onSheetChange()` to not depend on event.source parameter
+  - Now uses `SpreadsheetApp.getActiveSpreadsheet()` instead of `e.source`
+  - Function can be called with or without event parameter (supports both production onChange triggers and manual testing)
+  - Event parameter is now optional, making testing more reliable
+
+### Fixed
+- **docs/GOOGLE_APPS_SCRIPT_SETUP.md** - Fixed `TypeError: Cannot read properties of undefined (reading 'source')` in test functions
+  - Removed dependency on `e.source` which was undefined when calling `onSheetChange()` manually for testing
+  - Updated testing documentation with comprehensive Test 2 section explaining new trigger logic testing
+  - Added warnings and best practices for testing with real webhook endpoints
+  - Clarified that having multiple sheet tabs is perfectly fine (only Character_Submissions is processed)
+
+---
+
 ## [1.1.2] - 2025-12-20
 
 ### Added
