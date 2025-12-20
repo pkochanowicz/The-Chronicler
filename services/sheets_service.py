@@ -44,7 +44,7 @@ CHARACTER_SCHEMA_COLUMNS = [
     "trait_1", "trait_2", "trait_3", "status", "confirmation", "request_sdxl", 
     "recruitment_msg_id", "forum_post_url", "reviewed_by", "embed_json", 
     "death_cause", "death_story", "created_at", "updated_at", "notes",
-    "talents_json"
+    "talents"
 ]
 CHARACTER_FIELD_MAPPING = {
     "timestamp": "timestamp", "discord_id": "discord_id", "discord_name": "discord_name",
@@ -57,7 +57,7 @@ CHARACTER_FIELD_MAPPING = {
     "forum_post_url": "forum_post_url", "reviewed_by": "reviewed_by",
     "embed_json": "embed_json", "death_cause": "death_cause", "death_story": "death_story",
     "created_at": "created_at", "updated_at": "updated_at", "notes": "notes",
-    "talents": "talents_json"
+    "talents": "talents"
 }
 
 # Talent Library Sheet specific constants
@@ -298,11 +298,11 @@ class GoogleSheetsService: # Renamed class
 
     def _process_character_record(self, record: Dict[str, str]) -> Dict[str, Any]: # Renamed helper
         """Processes a single character record from the sheet, deserializing JSON fields."""
-        if "talents_json" in record and record["talents_json"]:
+        if "talents" in record and record["talents"]:
             try:
-                record["talents"] = json.loads(record["talents_json"])
+                record["talents"] = json.loads(record["talents"])
             except json.JSONDecodeError:
-                logger.warning(f"Failed to decode talents_json for character {record.get('char_name')}. Defaulting to empty dict.")
+                logger.warning(f"Failed to decode talents for character {record.get('char_name')}. Defaulting to empty dict.")
                 record["talents"] = {} 
         else:
             record["talents"] = {} 
