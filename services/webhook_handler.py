@@ -51,9 +51,9 @@ async def start_webhook_server(discord_bot):
     app.router.add_get('/health', health_handler)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8080)
+    site = web.TCPSite(runner, '0.0.0.0', settings.PORT)
     await site.start()
-    logger.info("Webhook server started on port 8080")
+    logger.info(f"Webhook server started on port {settings.PORT}")
 
 async def handle_webhook(request):
     """Handle incoming webhook requests."""

@@ -86,6 +86,9 @@ class Settings:
         # Webhook Security
         self.WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
 
+        # Deployment
+        self.PORT: int = int(os.getenv("PORT", "8080"))
+
         # Visuals
         self.DEFAULT_PORTRAIT_URL: str = os.getenv(
             "DEFAULT_PORTRAIT_URL",
