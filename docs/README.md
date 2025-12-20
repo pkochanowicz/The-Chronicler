@@ -82,15 +82,16 @@ The Chronicler is built with modern, production-grade standards.
    poetry run python main.py
    ```
 
-[**📚 Read the Full DevOps Guide**](./docs/DEVOPS_GUIDE.md)
+[**📚 Read the Full DevOps Guide**](./DEVOPS_GUIDE.md)
 
 ---
 
 ## 📖 The Archives (Documentation)
 
-- [**User Guide**](./docs/USER_GUIDE.md) - *For the heroes of the guild.*
-- [**Technical Manual**](./docs/TECHNICAL.md) - *For the goblins and gnomes engineering the backend.*
-- [**Deployment Guide**](./docs/DEPLOYMENT_GUIDE.md) - *Instructions for hosting on Fly.io.*
+- [**User Guide**](./USER_GUIDE.md) - *For the heroes of the guild.*
+- [**Technical Manual**](./TECHNICAL.md) - *For the goblins and gnomes engineering the backend.*
+- [**Deployment Guide**](./DEPLOYMENT_GUIDE.md) - *Instructions for hosting on Fly.io.*
+- [**Agent Selection Guide**](./Agents.md) - *For AI assistants working on this project.*
 
 ---
 
@@ -102,4 +103,4 @@ The Chronicler is built with modern, production-grade standards.
 
 © 2025 Paweł Kochanowicz · [GitHub](https://github.com/pkochanowicz)
 
-This project is licensed under the [AGPL v3 License](https://github.com/pkochanowicz/The-Chronicler/LICENSE).
+This project is licensed under the [AGPL v3 License](../LICENSE).

@@ -1078,7 +1078,7 @@ See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for production deployment.
 
 ## Testing Strategy
 
-See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for comprehensive testing procedures.
+See [TEST_SUITE_COMPLETION_REPORT.md](./TEST_SUITE_COMPLETION_REPORT.md) for comprehensive testing documentation.
 
 **Quick Test:**
 ```bash
@@ -1146,7 +1146,7 @@ created_at, updated_at, notes
 
 ---
 
-For additional troubleshooting, see [USER_GUIDE.md](./USER_GUIDE.md) and [OFFICER_GUIDE.md](./OFFICER_GUIDE.md).
+For additional troubleshooting, see [USER_GUIDE.md](./USER_GUIDE.md).
 
 ---
 

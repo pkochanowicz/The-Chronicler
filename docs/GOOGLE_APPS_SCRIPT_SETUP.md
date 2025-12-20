@@ -96,15 +96,16 @@ const COL_RECRUITMENT_MSG_ID = 18; // Column 19 (recruitment_msg_id)
  */
 function onSheetChange(e) {
   try {
-    // Only process changes to Character_Submissions
-    if (e.source.getActiveSheet().getName() !== SHEET_NAME) {
+    Logger.log("Sheet changed detected, analyzing...");
+
+    // Get the Character_Submissions sheet explicitly by name
+    var sheet = e.source.getSheetByName(SHEET_NAME);
+
+    if (!sheet) {
+      Logger.log("ERROR: Sheet '" + SHEET_NAME + "' not found!");
       return;
     }
 
-    Logger.log("Sheet changed detected, analyzing...");
-
-    // Get all data
-    var sheet = e.source.getSheetByName(SHEET_NAME);
     var data = sheet.getDataRange().getValues();
     var headers = data[0];
 
@@ -237,6 +238,50 @@ openssl rand -hex 32
 Copy the output and use it in BOTH:
 - Google Apps Script `WEBHOOK_SECRET`
 - Bot's `.env` file `WEBHOOK_SECRET`
+
+### Configuring the Target Sheet
+
+The webhook script must know which sheet to monitor. **Always use explicit sheet naming:**
+
+```javascript
+const SHEET_NAME = "Character_Submissions"; // Explicitly defined at top of script
+var sheet = e.source.getSheetByName(SHEET_NAME); // Get sheet by name
+```
+
+**⚠️ CRITICAL WARNING:** Do NOT use `e.source.getActiveSheet().getName()`
+
+**Why this fails:**
+- The `onChange` trigger fires for **all sheet modifications**, including programmatic changes
+- When Discord bot or Apps Script itself modifies the sheet, there is **no active user session**
+- `getActiveSheet()` returns `null` or throws an error in these scenarios
+- Your webhook will silently fail or crash
+
+**Correct approach:**
+1. Define `SHEET_NAME` constant at the top of the script
+2. Use `e.source.getSheetByName(SHEET_NAME)` to explicitly fetch the sheet
+3. Add null check: `if (!sheet) { return; }`
+
+**Verification checklist:**
+- ✅ Sheet tab name matches `SHEET_NAME` exactly (check for spaces, capitalization)
+- ✅ Script uses `getSheetByName()` instead of `getActiveSheet()`
+- ✅ Null check prevents crashes if sheet is renamed or deleted
+
+**Optional advanced approach (Script Properties):**
+
+For multi-environment setups, store configuration in Script Properties:
+
+```javascript
+function getSheetName() {
+  var properties = PropertiesService.getScriptProperties();
+  return properties.getProperty('TARGET_SHEET') || 'Character_Submissions';
+}
+
+// Then in onSheetChange:
+var sheetName = getSheetName();
+var sheet = e.source.getSheetByName(sheetName);
+```
+
+Set properties via: **Project Settings → Script Properties → Add property**
 
 ---
 

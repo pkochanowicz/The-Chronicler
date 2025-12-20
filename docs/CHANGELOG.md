@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.2] - 2025-12-20
+
+### Added
+- **docs/Agents.md** - Comprehensive LLM agent selection guide explaining the agent-based development workflow
+  - Quick reference tables for all 29 specialized agents
+  - Decision tree for AI assistants
+  - Multi-agent coordination patterns and best practices
+  - Complete guild roster with specializations and when to invoke each agent
+  - Context-efficient yet human-readable format balancing technical precision with narrative charm
+
+### Changed
+- **docs/README.md** - Updated documentation index to include Agent Selection Guide
+- **docs/README.md** - Fixed internal documentation links (removed incorrect `./docs/` prefix)
+- **docs/README.md** - Changed LICENSE link from GitHub URL to local relative path (`../LICENSE`)
+
+### Fixed
+- **docs/GOOGLE_APPS_SCRIPT_SETUP.md** - Fixed critical webhook configuration error
+  - Removed unreliable `e.source.getActiveSheet().getName()` check that fails for programmatic onChange events
+  - Replaced with explicit `e.source.getSheetByName(SHEET_NAME)` approach with null checking
+  - Added comprehensive "Configuring the Target Sheet" section explaining why `getActiveSheet()` fails for webhooks
+  - Added verification checklist and optional Script Properties approach for advanced setups
+- **docs/TECHNICAL.md** - Fixed broken link to non-existent `TESTING_GUIDE.md` (now references `TEST_SUITE_COMPLETION_REPORT.md`)
+- **docs/TECHNICAL.md** - Removed reference to non-existent `OFFICER_GUIDE.md`
+- **Documentation** - Improved internal linking structure for GitHub hosting compatibility
+
+---
+
 ## [1.1.1] - 2025-12-17
 
 ### 🐛 Phase 5: Trial by Fire - Bug Fixes
