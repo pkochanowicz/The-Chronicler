@@ -34,7 +34,7 @@ echo ""
 GOOGLE_CREDS_B64=""
 if [ -f credentials.json ]; then
     echo "📋 Found credentials.json - encoding to base64..."
-    GOOGLE_CREDS_B64=$(cat credentials.json | base64 | tr -d '\n')
+    GOOGLE_CREDS_B64=$(cat credentials.json | base64 -w 0 | tr -d '\n')
     echo "✓ Encoded: ${#GOOGLE_CREDS_B64} characters"
     echo ""
 else
