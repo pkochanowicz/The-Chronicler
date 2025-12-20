@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **fly.toml**: Modified the build configuration to use `Dockerfile.uv` for deployments, switching from a buildpack-based to a Dockerfile-based deployment strategy.
+- **TESTING_RESULTS.md**: Comprehensive report of the end-to-end testing suite execution (77 tests passed), verifying:
+  - Full 12-step `/register_character` interactive flow
+  - `/bury` ceremony and cemetery functionality
+  - Webhook security and trigger logic
+  - Error handling and recovery strategies
 
 ---
 
