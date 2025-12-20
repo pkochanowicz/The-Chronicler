@@ -15,6 +15,7 @@ google-auth-oauthlib = "^1.2.0"
 python-dotenv = "^1.0.1"
 aiohttp = "^3.9.3"
 beautifulsoup4 = "^4.14.3"
+pydantic = "^2.12.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
