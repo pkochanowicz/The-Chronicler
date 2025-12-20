@@ -84,6 +84,9 @@ class Settings:
         self.POLL_INTERVAL_SECONDS: int = int(os.getenv("POLL_INTERVAL_SECONDS", "60"))
         self.INTERACTIVE_TIMEOUT_SECONDS: int = int(os.getenv("INTERACTIVE_TIMEOUT_SECONDS", "300"))
 
+        # Database Maintenance
+        self.AUTOFORMAT_SHEETS_ON_STARTUP: bool = os.getenv("AUTOFORMAT_SHEETS_ON_STARTUP", "False").lower() == "true"
+
         # Webhook Security
         self.WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
 

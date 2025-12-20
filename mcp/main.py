@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from dotenv import load_dotenv
 from config.settings import settings
 from services.sheets_service import google_sheets_service
 from mcp.server import run_mcp_server
@@ -11,6 +12,9 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+# Load environment variables from .env file for standalone mode
+load_dotenv()
 
 class MockDiscordClient:
     """

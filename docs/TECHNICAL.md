@@ -37,6 +37,11 @@ Stores static talent data for validation.
 ### GoogleSheetsService (`services/sheets_service.py`)
 Manages all Google Sheets interactions.
 - **Initialization:** Auto-creates missing sheets/headers on startup.
+- **Schema Validation & Auto-Formatting:** 
+  - On startup, the service validates the schema of all required sheets against the official schema defined in the code.
+  - If a mismatch is found (e.g., missing columns, incorrect order), the bot will log a detailed error and refuse to start, preventing data corruption.
+  - To fix this, an operator can set the `AUTOFORMAT_SHEETS_ON_STARTUP=TRUE` environment variable. On the next boot, the bot will perform a **destructive re-formatting** of the invalid sheet.
+  - **WARNING:** This action is irreversible and will wipe all data from the specific sheet being formatted. It should only be used for initial setup or emergency recovery. The variable should be set back to `FALSE` after use.
 - **Methods:** `log_character`, `log_talent`, `update_character_status`, `get_character_by_name`.
 - **Logic:** Handles JSON serialization for complex fields (`talents`, `Requires`).
 

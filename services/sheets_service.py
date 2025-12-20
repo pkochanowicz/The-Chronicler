@@ -100,21 +100,62 @@ class GoogleSheetsService: # Renamed class
             raise
 
     def _initialize_sheets(self):
-        """Initialize and validate schemas for all managed sheets."""
-        # Initialize Character_Submissions sheet
-        self.character_sheet_instance = self._get_or_create_sheet(
-            CHARACTER_SHEET_NAME, CHARACTER_SCHEMA_COLUMNS
-        )
-        self.character_column_mapping = self._build_column_mapping(self.character_sheet_instance)
-        self._validate_schema(self.character_sheet_instance, CHARACTER_SCHEMA_COLUMNS)
+        """
+        Initialize and validate schemas for all managed sheets.
+        If a sheet has an invalid schema, prompt the user for auto-formatting.
+        """
+        sheets_to_validate = [
+            (CHARACTER_SHEET_NAME, CHARACTER_SCHEMA_COLUMNS, "character_sheet_instance"),
+            (TALENT_LIBRARY_SHEET_NAME, TALENT_LIBRARY_SCHEMA_COLUMNS, "talent_library_sheet_instance"),
+        ]
 
-        # Initialize Talent_Library sheet
-        self.talent_library_sheet_instance = self._get_or_create_sheet(
-            TALENT_LIBRARY_SHEET_NAME, TALENT_LIBRARY_SCHEMA_COLUMNS
+        for sheet_name, schema, instance_attr in sheets_to_validate:
+            worksheet = self._get_or_create_sheet(sheet_name, schema)
+            setattr(self, instance_attr, worksheet)
+            
+            is_valid, error_msg = self._validate_schema(worksheet, schema)
+            
+            if not is_valid:
+                logger.error(f"SCHEMA ERROR for worksheet '{sheet_name}':\n{error_msg}")
+                if settings.AUTOFORMAT_SHEETS_ON_STARTUP:
+                    self._format_sheet(worksheet, schema)
+                    # Re-build column mapping after formatting
+                    column_mapping = self._build_column_mapping(worksheet)
+                    if instance_attr == "character_sheet_instance":
+                        self.character_column_mapping = column_mapping
+                    else:
+                        self.talent_library_column_mapping = column_mapping
+                else:
+                    logger.critical(
+                        f"CRITICAL: Application cannot start with an invalid schema for '{sheet_name}'.\n"
+                        "To automatically format the sheet (THIS WILL DELETE ALL DATA in this tab), "
+                        "set the environment variable AUTOFORMAT_SHEETS_ON_STARTUP=TRUE and restart the bot.\n"
+                    )
+                    raise ValueError(f"Invalid schema for worksheet '{sheet_name}'. Halting startup.")
+            else:
+                 # Build column mapping for valid sheets
+                column_mapping = self._build_column_mapping(worksheet)
+                if instance_attr == "character_sheet_instance":
+                    self.character_column_mapping = column_mapping
+                else:
+                    self.talent_library_column_mapping = column_mapping
+    
+    def _format_sheet(self, worksheet, schema_columns: List[str]):
+        """
+        Formats a worksheet by clearing it and setting the header row.
+        THIS IS A DESTRUCTIVE OPERATION.
+        """
+        logger.warning(
+            f"AUTO-FORMATTING worksheet '{worksheet.title}'. "
+            f"ALL DATA in this sheet will be DELETED."
         )
-        self.talent_library_column_mapping = self._build_column_mapping(self.talent_library_sheet_instance)
-        self._validate_schema(self.talent_library_sheet_instance, TALENT_LIBRARY_SCHEMA_COLUMNS)
-
+        try:
+            worksheet.clear()
+            worksheet.append_row(schema_columns)
+            logger.info(f"Worksheet '{worksheet.title}' has been successfully formatted.")
+        except Exception as e:
+            logger.error(f"Failed to format worksheet '{worksheet.title}': {e}")
+            raise
 
     def _get_or_create_sheet(self, sheet_name: str, schema_columns: List[str]):
         """
@@ -135,38 +176,52 @@ class GoogleSheetsService: # Renamed class
         """Builds a column name to index mapping for a given worksheet."""
         headers = worksheet.row_values(1)
         if not headers:
-            raise ValueError(f"Worksheet '{worksheet.title}' has no header row.")
+            # This can happen if the sheet is completely empty, even after creation.
+            logger.warning(f"Worksheet '{worksheet.title}' has no header row. Attempting to set it.")
+            worksheet.append_row(CHARACTER_SCHEMA_COLUMNS if worksheet.title == CHARACTER_SHEET_NAME else TALENT_LIBRARY_SCHEMA_COLUMNS)
+            headers = worksheet.row_values(1)
+            if not headers:
+                 raise ValueError(f"Failed to set header row for empty worksheet '{worksheet.title}'.")
         return {name.strip(): i for i, name in enumerate(headers)}
 
-    def _validate_schema(self, worksheet, expected_schema_columns: List[str]):
-        """Validates that a worksheet's header matches the expected schema."""
+    def _validate_schema(self, worksheet, expected_schema_columns: List[str]) -> (bool, str):
+        """
+        Validates that a worksheet's header matches the expected schema.
+        Returns a tuple of (is_valid: bool, error_message: str).
+        """
         current_headers = [h.strip() for h in worksheet.row_values(1)]
-        if current_headers != expected_schema_columns:
-            expected_set = set(expected_schema_columns)
-            current_set = set(current_headers)
-            
-            missing_columns = expected_set - current_set
-            extra_columns = current_set - expected_set
-            
-            error_msg = (
-                f"Schema mismatch for worksheet '{worksheet.title}'.\n"
-                f"  - Expected Headers: {expected_schema_columns}\n"
-                f"  - Actual Headers:   {current_headers}\n"
-            )
-            if missing_columns:
-                error_msg += f"  - Missing Columns: {sorted(list(missing_columns))}\n"
-            if extra_columns:
-                error_msg += f"  - Extra Columns: {sorted(list(extra_columns))}\n"
+        
+        if not current_headers:
+            return False, "The sheet has no header row or is completely empty."
 
-            # Check for ordering issues
-            if not missing_columns and not extra_columns:
-                for i, (expected, actual) in enumerate(zip(expected_schema_columns, current_headers)):
-                    if expected != actual:
-                        error_msg += f"  - Order Mismatch at index {i}: Expected '{expected}', but got '{actual}'.\n"
-                        break 
-            
-            raise ValueError(error_msg)
-        logger.info(f"Schema validation successful for worksheet '{worksheet.title}'.")
+        if current_headers == expected_schema_columns:
+            logger.info(f"Schema validation successful for worksheet '{worksheet.title}'.")
+            return True, ""
+
+        expected_set = set(expected_schema_columns)
+        current_set = set(current_headers)
+        
+        missing_columns = expected_set - current_set
+        extra_columns = current_set - expected_set
+        
+        error_msg = (
+            f"Schema mismatch details for worksheet '{worksheet.title}':\n"
+            f"  - Expected Headers: {expected_schema_columns}\n"
+            f"  - Actual Headers:   {current_headers}\n"
+        )
+        if missing_columns:
+            error_msg += f"  - Missing Columns in Sheet: {sorted(list(missing_columns))}\n"
+        if extra_columns:
+            error_msg += f"  - Extra Columns in Sheet: {sorted(list(extra_columns))}\n"
+
+        # Check for ordering issues
+        if not missing_columns and not extra_columns:
+            for i, (expected, actual) in enumerate(zip(expected_schema_columns, current_headers)):
+                if expected != actual:
+                    error_msg += f"  - Order Mismatch at index {i}: Expected '{expected}', but got '{actual}'.\n"
+                    break
+        
+        return False, error_msg
 
 
     def load_talent_data(self):

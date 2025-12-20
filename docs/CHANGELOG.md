@@ -13,7 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This release marks the transition to a fully webhook-driven architecture (Path B), a comprehensive 27-column character schema, and the introduction of major gameplay systems.
 
+### Fixed
+- **Fly.io Deployment:** Resolved critical startup errors on Fly.io by setting missing environment variables: `MCP_API_KEY`, `GRAPHICS_STORAGE_CHANNEL_ID`, and `WEBHOOK_SECRET`.
+
 ### Added
+- **Schema Auto-Formatting:** Implemented a robust schema validation system on application startup. If a Google Sheet schema is invalid, the bot will log a detailed error and halt. The user can then set the `AUTOFORMAT_SHEETS_ON_STARTUP=TRUE` environment variable to trigger a one-time, destructive auto-formatting of the sheets on the next boot, preventing startup failures due to schema drift.
 - **Guild Bank System:**
   - New `GuildBankService` handling a one-member-to-many-items relationship.
   - New Google Sheet tab `Guild_Bank` with 12-column schema.
