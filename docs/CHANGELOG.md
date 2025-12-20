@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.4] - 2025-12-20
+
+### Added
+- **docs/GOOGLE_APPS_SCRIPT_SETUP.md** - Comprehensive logging throughout `onSheetChange()` and `processRow()` functions
+  - Entry/exit logging with clear visual markers (=== START/END ===)
+  - Spreadsheet and sheet name verification logging
+  - Row-by-row processing trace with trigger condition values
+  - Available sheets enumeration when sheet not found
+  - Full error details with stack traces
+- **docs/GOOGLE_APPS_SCRIPT_SETUP.md** - New `listAllSheets()` debugging helper function
+  - Shows exact names of all sheets in spreadsheet
+  - Displays row/column counts and sheet IDs
+  - Helps diagnose sheet name mismatch issues
+
+### Changed
+- **docs/GOOGLE_APPS_SCRIPT_SETUP.md** - Enhanced Test 2 documentation with detailed expected log output
+- **docs/GOOGLE_APPS_SCRIPT_SETUP.md** - Updated `testTriggerLogic()` with clearer log messages
+
+### Fixed
+- **docs/GOOGLE_APPS_SCRIPT_SETUP.md** - Added comprehensive troubleshooting section for silent failures
+  - Diagnosis steps for incomplete logs
+  - Sheet name mismatch detection and resolution
+  - Case-sensitivity and space-sensitivity warnings
+  - Clear verification steps after fixing
+  - Multi-tab spreadsheet clarification
+
+---
+
 ## [1.1.3] - 2025-12-20
 
 ### Added
