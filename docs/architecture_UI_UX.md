@@ -131,7 +131,7 @@ The MCP Platform retains its original, well-defined scope as a flexible, LLM-ena
 
 These components are utilized by both the Chronicler Gateway Service and the MCP Platform as needed.
 
--   **Webhook Handler:** Primarily for ingesting events or data from external sources, transitioning from Google Apps Script to more robust solutions as the architecture matures.
+-   **Webhook Handler:** Primarily for ingesting events or data from external sources, utilizing the FastAPI gateway for robust handling.
 -   **Services:** Modular components for interacting with external systems (Discord API, PostgreSQL database).
 -   **Models:** Pydantic models for rigorous data validation and structured data exchange.
 
