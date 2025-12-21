@@ -1,148 +1,148 @@
-# The Chronicler: Test Suite & Quality Assurance (v2.0.0 "Reformation")
+# The Chronicler: The Grand Test Doctrine (v2.0.0)
 
-**Status:** Living Document  
+**Status:** The Immutable Law of Verification  
 **Architecture:** FastAPI + Supabase (PostgreSQL) + Discord Bot  
-**Coverage Target:** 100% Core Logic / 95% Overall
+**Mandate:** "Tests do not protect code. They protect truth."
 
 ---
 
-## 1. The Philosophy of Verification
+## 🏗️ I. The Hierarchy of Verification
 
-We do not hope code works; we **prove** it works.
-The test suite is the first line of defense against the corruption of our archives.
+We adhere to a strict testing pyramid. Leaking abstractions between layers is a violation of protocol.
 
-### 1.1 The Testing Pyramid
-1.  **Unit Tests (Fast):** Verify individual functions, validators, and models in isolation.
-2.  **Integration Tests (Medium):** Verify interactions between Services, Repositories, and the Database.
-3.  **End-to-End (E2E) Trials (Slow):** Simulate full user flows from Discord command to Database persistence.
+### 1. 🛡️ Unit Tests (The Foundation)
+*   **Scope:** Pure logic, isolated functions, Pydantic models, validators.
+*   **Dependencies:** ZERO. No DB, no Discord, no Network.
+*   **Speed:** < 10ms per test.
+*   **Location:** `tests/unit/`
+*   **Key Doctrine:**
+    *   All regex patterns for scraping must have unit tests with HTML snippets.
+    *   All `domain/validators.py` logic must be exhaustively tested.
+    *   All Pydantic models must verify field constraints (max_length, regex).
 
-### 1.2 The "Split Brain" Prevention Protocol
-A specific subset of tests is dedicated to ensuring **NO** logic accidentally reverts to legacy Google Sheets paths.
-- **Rule:** If a test attempts to import `gspread`, it fails.
-- **Rule:** If a test attempts to connect to `sheets.googleapis.com`, it fails.
+### 2. ⚙️ Service Integration Tests (The Engine)
+*   **Scope:** `CharacterService`, `GuildBankService`, `WebhookHandler`.
+*   **Dependencies:** Test Database (Docker/Testcontainers). **NO** External APIs (Discord/Sheets).
+*   **Speed:** < 500ms per test.
+*   **Location:** `tests/integration/`
+*   **Key Doctrine:**
+    *   **The Transaction Guarantee:** All DB operations within a service method must be atomic. Testing must verify rollbacks on failure.
+    *   **The Repository Pattern:** Services never speak SQL; they speak to Repositories. Tests verify this boundary.
 
----
+### 3. 🌐 API Contract Tests (The Gateway)
+*   **Scope:** FastAPI Routes (`/webhooks`, `/health`, `/api`).
+*   **Dependencies:** Test Database, Mocked Discord Gateway.
+*   **Location:** `tests/api/`
+*   **Key Doctrine:**
+    *   All endpoints must return correct HTTP Status Codes (200, 201, 400, 401, 404, 500).
+    *   Webhooks must validate `X-Signature-Ed25519` (mocked in test, but logic verified).
 
-## 2. Test Environment Configuration
-
-### 2.1 Technology Stack
-- **Runner:** `pytest`
-- **AsyncIO:** `pytest-asyncio` (Strict mode)
-- **Database:** `testcontainers` (PostgreSQL) or Local Docker
-- **HTTP Client:** `httpx` (Async)
-- **Mocking:** `pytest-mock`
-
-### 2.2 Database Isolation
-Every test run must operate on a **clean, ephemeral database**.
-- **Schema:** Automatically applied from `sql/schema_v1.sql`.
-- **Seeding:** `tests/conftest.py` provides fixtures for:
-  - `active_user_id` (Discord ID)
-  - `mock_character` (Level 60 Warrior)
-  - `mock_guild_bank_item` (Obsidian Edged Blade)
-
----
-
-## 3. Comprehensive Test Scenarios
-
-### 3.1 🛡️ Domain Layer (Unit Tests)
-*Location: `tests/unit/`*
-
-#### `test_validators.py`
-- [ ] **Race/Class Compatibility:** Verify `validate_race_class("Orc", "Paladin")` raises `ValueError`.
-- [ ] **Talent Math:** Verify `validate_talent_points` rejects builds with >51 points in a tree.
-- [ ] **Name Sanitization:** Verify names with special characters are rejected or cleaned.
-
-#### `test_models.py`
-- [ ] **Pydantic Validation:** Ensure `CharacterCreate` model rejects missing required fields.
-- [ ] **Enum Integrity:** Ensure `status` field accepts only valid enum values (PENDING, REGISTERED, etc.).
-
-### 3.2 ⚙️ Service Layer (Integration Tests)
-*Location: `tests/integration/`*
-
-#### `test_character_service.py`
-- [ ] **Create Character:**
-  - Input: Valid `CharacterCreate` DTO.
-  - Action: `service.create_character()`.
-  - Assert: Record exists in DB, UUID generated, timestamps set.
-- [ ] **Duplicate Prevention:**
-  - Action: Create character with same name twice.
-  - Assert: `IntegrityError` or Custom Exception handling.
-- [ ] **Soft Delete/Archive:**
-  - Action: `service.delete_character()`.
-  - Assert: Character not returned in `get_all`, but exists in audit logs (if implemented).
-
-#### `test_bank_service.py`
-- [ ] **Deposit Item:**
-  - Action: Deposit "Linen Cloth" x20.
-  - Assert: New `bank_items` row, status='AVAILABLE'.
-- [ ] **Withdraw Item:**
-  - Action: Withdraw item UUID.
-  - Assert: Status changes to 'WITHDRAWN', `withdrawn_by` field populated.
-- [ ] **Concurrency:**
-  - Action: Two users try to withdraw same item simultaneously.
-  - Assert: Only one succeeds (Database Locking check).
-
-### 3.3 🌐 API Gateway (FastAPI Tests)
-*Location: `tests/api/`*
-
-#### `test_webhooks.py`
-- [ ] **Signature Verification:**
-  - Action: POST to `/webhooks/discord` with invalid signature/secret.
-  - Assert: 401 Unauthorized.
-- [ ] **Payload Parsing:**
-  - Action: POST valid payload.
-  - Assert: Background task spawned, 200 OK returned immediately.
-
-#### `test_health.py`
-- [ ] **Liveness:** GET `/health` returns 200.
-- [ ] **Readiness:** GET `/health?check=db` verifies DB connection.
-
-### 3.4 🤖 Discord Bot (Mocked Integration)
-*Location: `tests/bot/`*
-
-#### `test_registration_flow.py`
-- [ ] **Step Traversal:** Simulate user interaction through all 12 steps.
-- [ ] **Timeout Handling:** Simulate user inactivity > 300s. Assert flow cancellation.
-- [ ] **Finalization:** Ensure `Finish` button triggers `CharacterService.create_character`.
-
-#### `test_burial_flow.py`
-- [ ] **Search:** Simulate searching for non-existent character. Assert error message.
-- [ ] **Burial:** Simulate completing burial. Assert `GraveyardRepository` entry created and Character status = `DECEASED`.
+### 4. 🌌 MCP-Orchestrated End-to-End (E2E) Trials (The World)
+*   **Scope:** Full user journeys simulating Discord interactions via MCP.
+*   **Dependencies:** Test Database, Simulated Discord Environment (or specific test channels).
+*   **Location:** `tests/e2e/`
+*   **Key Doctrine:** See Section III.
 
 ---
 
-## 4. The "Migration Audit" Suite
-*Specialized tests to ensure v2.0.0 compliance.*
+## 🚫 II. The "Split Brain" Firewall Protocol
 
-- [ ] **No-Gspread Check:** Scan all loaded modules during test execution. Fail if `gspread` is present.
-- [ ] **Env Var Check:** Fail if `GOOGLE_SHEET_ID` is accessed by any runtime service.
-- [ ] **DB Connection Check:** Fail if `DATABASE_URL` is not set.
+To prevent regression to the v1.0.0 Google Sheets architecture, the following **Negative Tests** are mandatory.
 
----
+### 1. The Gspread Ban
+A pipeline scanner must verify that no *runtime* code imports `gspread` or `oauth2client` unless explicitly flagged as a legacy migration utility.
+*   **Test:** `tests/audit/test_no_legacy_imports.py`
+*   **Assertion:** `import gspread` triggers failure in core services.
 
-## 5. Execution Guide
-
-### Running the Suite
-```bash
-# Run all tests
-pytest
-
-# Run only "Fast" unit tests
-pytest tests/unit
-
-# Run full integration suite with Docker DB
-pytest tests/integration --run-slow
-```
-
-### Continuous Integration (CI)
-Github Actions pipeline must:
-1.  Lint (`ruff`).
-2.  Type Check (`mypy`).
-3.  Run `pytest`.
-4.  Build Docker Image.
-5.  Deploy to Fly.io (only on `main`).
+### 2. The Configuration Quarantine
+*   **Test:** `tests/audit/test_config_isolation.py`
+*   **Assertion:** The application must start successfully even if `GOOGLE_SHEET_ID` is unset or invalid (verifying Lazy Loading and optional dependency).
 
 ---
 
-**"Trust, but verify. Then verify again."**
-*-- Thaldrin the Chronicler*
+## 🌌 III. The MCP "War Games" (E2E Doctrine)
+
+We do not manually click buttons. We summon agents to do it for us. The **MCP Platform** serves as the test conductor.
+
+### 1. The Actor Model
+The test suite utilizes the `chronicler-mcp` to act as a Virtual User.
+
+*   **Virtual User (VU):** An LLM agent (or scripted equivalent) configured with specific Discord permissions (Wanderer, Officer, Admin).
+*   **Simulated Interface:** A mock object that replicates the Discord Gateway `Interaction` payload.
+
+### 2. War Game Scenarios
+
+#### ⚔️ Scenario A: The Sacred Ritual (Registration)
+*   **Objective:** Verify the 12-step state machine without data loss.
+*   **Sequence:**
+    1.  VU invokes `/register_character`.
+    2.  System responds with Embed + View (Introduction).
+    3.  VU clicks "Confirm Identity".
+    4.  ... (Steps 2-11) ...
+    5.  VU uploads image (Simulated Attachment URL).
+    6.  VU confirms.
+*   **Verifications:**
+    *   **DB:** Row created in `characters` table with `status='PENDING'`.
+    *   **DB:** `meta->portrait_url` matches uploaded URL.
+    *   **Logic:** `created_at` timestamp is set.
+
+#### ⚰️ Scenario B: The Rite of Remembrance (Burial)
+*   **Objective:** Verify data movement and irreversible state change.
+*   **Prerequisite:** A character in `REGISTERED` state exists.
+*   **Sequence:**
+    1.  VU (Officer) invokes `/bury`.
+    2.  VU searches for character name.
+    3.  System returns Match.
+    4.  VU provides `death_cause` and `death_story`.
+    5.  VU confirms.
+*   **Verifications:**
+    *   **DB:** `characters.status` UPDATE to `'DECEASED'`.
+    *   **Event:** `POST_TO_CEMETERY` webhook triggered (mocked assertion).
+    *   **Logic:** Cannot bury an already buried character (Idempotency).
+
+#### 🏦 Scenario C: The Economy (Bank)
+*   **Objective:** Verify atomic transactions and audit trails.
+*   **Sequence:**
+    1.  VU invokes `/bank deposit item:"Black Lotus" qty:1`.
+    2.  **DB Check:** `guild_bank` count = 1.
+    3.  VU invokes `/bank withdraw item_id:<UUID>`.
+    4.  **DB Check:** `guild_bank` status = 'WITHDRAWN', `withdrawn_by` = VU ID.
+*   **Chaos Injection:** Two VUs try to withdraw the same UUID simultaneously. Database locking must prevent double-spend.
+
+---
+
+## 🔍 IV. The "Missing Cases" Hunt (Edge & Chaos)
+
+The following scenarios are explicitly required to address the "Skeptic" agent's concerns.
+
+### 1. The "Ghost in the Machine" (Partial Failures)
+*   **Scenario:** Database write succeeds, but Discord Webhook fails (500/Timeout).
+*   **Requirement:** The system must log the failure but *not* roll back the DB commit (Eventual Consistency) OR implementation of a retry queue. *Decision: v2.0 implements logging; v2.1 will implement retry queue.*
+
+### 2. The "Forbidden Knowledge" (Injection Attacks)
+*   **Scenario:** User inputs SQL injection or Discord Markdown injection in `backstory`.
+*   **Requirement:** Pydantic validators must sanitize inputs. Discord messages must escape user content.
+
+### 3. The "Image Void" (CDN Failures)
+*   **Scenario:** User uploads an image, but the Discord CDN link is broken or 403.
+*   **Requirement:** The `post_image_to_graphics_storage` tool must verify image accessibility before confirming the step. If fail, fallback to `DEFAULT_PORTRAIT_URL`.
+
+### 4. The "Race of the Officers"
+*   **Scenario:** Two officers click "Approve" on the same recruitment thread at the exact same second.
+*   **Requirement:** Database constraint or application logic must handle the race condition. Only one should succeed; the second should receive "Already processed".
+
+---
+
+## 📊 V. Pre-Commit Guarantees
+
+Before any `git commit` is accepted, the **Local Sentinel** must pass:
+
+1.  **Static Analysis:** `ruff check .` (Zero errors)
+2.  **Type Safety:** `mypy .` (Strict mode)
+3.  **Unit Tests:** `pytest tests/unit` (100% Pass)
+4.  **Schema Check:** `alembic check` (DB models match migration files)
+
+---
+
+**"The Ink Must Not Fade."**
+*Documentation driven by the necessities of the v2.0.0 Reformation.*
