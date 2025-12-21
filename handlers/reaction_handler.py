@@ -22,7 +22,7 @@ import logging
 import discord
 from discord.ext import commands
 from config.settings import settings
-from services.sheets_service import CharacterRegistryService
+from services.sheets_service import GoogleSheetsService
 from domain.models import STATUS_REGISTERED, STATUS_REJECTED
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class ReactionHandler(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.registry = CharacterRegistryService()
+        self.registry = GoogleSheetsService()
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):

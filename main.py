@@ -1,23 +1,89 @@
+import asyncio
+import os
+import logging
+import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from db.database import init_db
+
+# Configure logging first to capture everything
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+logger.info("Initializing application module...")
+
+try:
+    from db.database import init_db
+    from services.discord_client import bot
+    from config.settings import settings
+    from routers import characters, webhooks, health
+except Exception as e:
+    logger.critical(f"Failed to import dependencies: {e}", exc_info=True)
+    raise
+
+async def load_extensions():
+    """Load Discord bot extensions (cogs)."""
+    extensions = [
+        "commands.character_commands",
+        "commands.officer_commands", 
+        "commands.bank_commands",
+        "commands.talent_commands",
+        "handlers.reaction_handler"
+    ]
+    for ext in extensions:
+        try:
+            await bot.load_extension(ext)
+            logger.info(f"Loaded extension: {ext}")
+        except Exception as e:
+            logger.error(f"Failed to load extension {ext}: {e}", exc_info=True)
+
+async def start_discord_bot():
+    """Start the Discord bot in the background."""
+    try:
+        async with bot:
+            await load_extensions()
+            logger.info("Starting Discord bot...")
+            await bot.start(settings.DISCORD_TOKEN)
+    except Exception as e:
+        logger.critical(f"Discord bot task failed: {e}", exc_info=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup event
-    await init_db()
-    yield
-    # Shutdown event
-    print("Shutting down...")
+    try:
+        logger.info("Initializing database...")
+        await init_db()
+        
+        # Start Discord bot task
+        logger.info("Initializing Discord bot task...")
+        bot_task = asyncio.create_task(start_discord_bot())
+        
+        yield
+        
+        # Shutdown event
+        logger.info("Shutting down...")
+    except Exception as e:
+        logger.critical(f"Lifespan error: {e}", exc_info=True)
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(title="The Chronicler", lifespan=lifespan)
+
+# Include routers
+try:
+    app.include_router(characters.router, prefix="/characters", tags=["characters"])
+    app.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
+    app.include_router(health.router, prefix="/health", tags=["health"])
+except Exception as e:
+    logger.error(f"Failed to include routers: {e}", exc_info=True)
 
 @app.get("/")
 async def read_root():
-    return {"message": "Welcome to The Chronicler API!"}
+    return {"message": "The Chronicler is Online."}
 
-# TODO: Include routers for webhooks, health etc.
-from routers import characters, health, webhooks, webhooks, health
-app.include_router(characters.router, prefix="/characters", tags=["characters"])
-app.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
-app.include_router(health.router, prefix="/health", tags=["health"])
+if __name__ == "__main__":
+    # Get port from environment or default to 8080
+    port = int(os.getenv("PORT", 8080))
+    logger.info(f"Starting Uvicorn on port {port}...")
+    try:
+        # Run Uvicorn
+        uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+    except Exception as e:
+        logger.critical(f"Uvicorn failed: {e}", exc_info=True)

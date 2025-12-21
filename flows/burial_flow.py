@@ -115,6 +115,8 @@ class BurialFlow(InteractiveFlow):
         )
         
         msg = await self.wait_for_message()
+        search_name = msg.content.strip()
+        
         registry = GoogleSheetsService()
         char_data = registry.get_character_by_name(search_name)
         

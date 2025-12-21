@@ -35,4 +35,4 @@ primary_region = 'arn'
   cpus = 1
 
   [vm.restart]
-    policy = "no"
+    policy = "always"

@@ -81,10 +81,22 @@ class GoogleSheetsService: # Renamed class
         self.talent_library_sheet_instance = None
         self.character_column_mapping = {}
         self.talent_library_column_mapping = {}
-        
-        self._connect_to_workbook()
-        self._initialize_sheets()
-        self.load_talent_data() # Load talent data into domain/talent_data.py
+        # Lazy initialization: Do not connect here.
+
+    def _ensure_connected(self):
+        """Lazy connection to Google Sheets."""
+        if self.client and self.workbook:
+            return
+
+        logger.info("Connecting to Google Sheets (Lazy Init)...")
+        try:
+            self._connect_to_workbook()
+            self._initialize_sheets()
+            self.load_talent_data()
+            logger.info("Google Sheets connection established.")
+        except Exception as e:
+            logger.critical(f"Failed to connect to Google Sheets: {e}")
+            raise
 
     def _connect_to_workbook(self):
         """Establish connection to Google Sheets workbook."""
@@ -228,6 +240,12 @@ class GoogleSheetsService: # Renamed class
         """
         Loads talent data from the Talent_Library sheet into domain/talent_data.py's TALENT_DATA.
         """
+        # Ensure connection first if called directly (though usually called by _ensure_connected)
+        if not self.client: 
+             # Avoid recursion loop if called from _ensure_connected
+             # Assuming this is only called from _ensure_connected or after init
+             pass
+
         logger.info("Loading talent data from Talent_Library sheet...")
         try:
             records = self.talent_library_sheet_instance.get_all_records()
@@ -285,6 +303,7 @@ class GoogleSheetsService: # Renamed class
         Expects a dictionary with keys matching the columns (or aliases).
         Returns False if character name already exists (duplicate prevention).
         """
+        self._ensure_connected()
         # Check for duplicate character name
         char_name = character_data.get("char_name", "")
         if char_name:
@@ -334,6 +353,7 @@ class GoogleSheetsService: # Renamed class
         """
         Update status and optional fields for a character (Character_Submissions).
         """
+        self._ensure_connected()
         try:
             # Find the row (search in char_name column)
             name_col_idx = self.character_column_mapping.get("char_name")
@@ -385,6 +405,7 @@ class GoogleSheetsService: # Renamed class
 
     def get_character_by_name(self, char_name: str) -> Optional[Dict[str, Any]]:
         """Retrieve character data by name (Character_Submissions)."""
+        self._ensure_connected()
         try:
             records = self.character_sheet_instance.get_all_records()
             for record in records:
@@ -397,6 +418,7 @@ class GoogleSheetsService: # Renamed class
 
     def get_characters_by_user(self, discord_id: str) -> List[Dict[str, Any]]:
         """Retrieve all characters for a Discord user (Character_Submissions)."""
+        self._ensure_connected()
         try:
             records = self.character_sheet_instance.get_all_records()
             processed_records = [self._process_character_record(r) for r in records if str(r.get("discord_id")) == str(discord_id)]
@@ -407,6 +429,7 @@ class GoogleSheetsService: # Renamed class
 
     def get_all_characters(self) -> List[Dict[str, Any]]:
         """Retrieve all characters from the sheet (Character_Submissions)."""
+        self._ensure_connected()
         try:
             records = self.character_sheet_instance.get_all_records()
             processed_records = [self._process_character_record(r) for r in records]
@@ -425,6 +448,7 @@ class GoogleSheetsService: # Renamed class
         """
         Update a single field for a specific character (Character_Submissions).
         """
+        self._ensure_connected()
         try:
             # Find the character's row
             all_records = self.character_sheet_instance.get_all_records()
@@ -475,6 +499,7 @@ class GoogleSheetsService: # Renamed class
 
     def log_talent(self, talent_data: Dict[str, Any]) -> bool:
         """Logs a new talent to the Talent_Library sheet."""
+        self._ensure_connected()
         try:
             # Prepare row for Talent_Library
             row = [""] * len(TALENT_LIBRARY_SCHEMA_COLUMNS)
@@ -499,4 +524,4 @@ class GoogleSheetsService: # Renamed class
             return False
 
 # Initialize the service globally
-# google_sheets_service = GoogleSheetsService()
+google_sheets_service = GoogleSheetsService()

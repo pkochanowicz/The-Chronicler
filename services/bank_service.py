@@ -26,10 +26,14 @@ class GuildBankService:
 
     def __init__(self):
         self.sheet = None
-        self._initialize_sheet()
+        # Lazy initialization: Do not initialize sheet here.
 
     def _initialize_sheet(self):
         """Initializes the bank sheet using GoogleSheetsService."""
+        if self.sheet:
+            return
+
+        google_sheets_service._ensure_connected()
         self.sheet = google_sheets_service._get_or_create_sheet(
             self.SHEET_NAME, self.SCHEMA_COLUMNS
         )
@@ -44,6 +48,7 @@ class GuildBankService:
         Deposits an item into the guild bank.
         Generates a unique item_id.
         """
+        self._initialize_sheet()
         try:
             item_id = str(uuid.uuid4())
             timestamp = self._get_timestamp()
@@ -77,6 +82,7 @@ class GuildBankService:
         """
         Withdraws an item (marks it as WITHDRAWN).
         """
+        self._initialize_sheet()
         try:
             # Find the row with the item_id
             # Fetch all records is expensive but robust for finding by ID without knowing row num
@@ -112,6 +118,7 @@ class GuildBankService:
 
     def get_available_items(self) -> List[Dict[str, Any]]:
         """Returns all items with status 'AVAILABLE'."""
+        self._initialize_sheet()
         try:
             all_records = self.sheet.get_all_records()
             return [item for item in all_records if item.get("status") == "AVAILABLE"]
@@ -121,6 +128,7 @@ class GuildBankService:
 
     def get_member_deposits(self, discord_id: str) -> List[Dict[str, Any]]:
         """Returns items deposited by a specific member."""
+        self._initialize_sheet()
         try:
             all_records = self.sheet.get_all_records()
             return [item for item in all_records if str(item.get("deposited_by")) == str(discord_id)]
@@ -130,6 +138,7 @@ class GuildBankService:
 
     def get_member_withdrawals(self, discord_id: str) -> List[Dict[str, Any]]:
         """Returns items withdrawn by a specific member."""
+        self._initialize_sheet()
         try:
             all_records = self.sheet.get_all_records()
             return [item for item in all_records if str(item.get("withdrawn_by")) == str(discord_id)]
