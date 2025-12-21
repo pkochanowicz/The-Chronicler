@@ -14,7 +14,7 @@ Forged in the fires of Python and tempered by the strict laws of World of Warcra
 
 ---
 
-## ✨ Features (v2.0)
+## ✨ Features (v2.0 "Reformation")
 
 ### 🖋️ The Sacred Ritual of Registration
 Forget boring forms. New members are greeted by *Chronicler Thaldrin* for a cinematic, 12-step interactive interview.
@@ -31,7 +31,7 @@ A robust banking system tracking every copper and linen cloth.
 ### ⚔️ Talent System & Validation
 Ensure your build is battle-ready and legal.
 - **Talent Audit:** Validate your build code against Classic+ rules with `/talent audit`.
-- **Dynamic Library:** Talents are loaded from a Google Sheet for easy updates.
+- **Dynamic Library:** Talents are loaded dynamically for easy updates.
 
 ### ⚰️ The Rite of Remembrance
 Death is part of the journey. When a hero falls, officers perform the **Burial Rite**.
@@ -52,9 +52,9 @@ Built on a robust, event-driven architecture:
 
 The Chronicler is built with modern, production-grade standards.
 
-- **Stack:** Python 3.11, `discord.py`, `aiohttp`, `gspread`
-- **Architecture:** Webhook-driven (Google Apps Script → Discord)
-- **Deployment:** Fly.io / Render.com ready
+- **Stack:** Python 3.11, `discord.py`, `aiohttp`, `FastAPI`
+- **Database:** PostgreSQL (Supabase)
+- **Deployment:** Fly.io
 - **Quality:** 100% Test Coverage, Type-hinted, Linted
 
 ### Quick Start
@@ -82,8 +82,8 @@ The Chronicler is built with modern, production-grade standards.
 
 - [**User Guide**](./docs/USER_GUIDE.md) - *For the heroes of the guild.*
 - [**Technical Manual**](./docs/TECHNICAL.md) - *For the goblins and gnomes engineering the backend.*
-- [**Deployment Guide**](./docs/DEPLOYMENT_GUIDE.md) - *Instructions for hosting.*
-- [**Master Blueprint v2.0**](./docs/MASTER_BLUEPRINT_V2.md) - *The architectural vision.*
+- [**Deployment Guide**](./docs/DEPLOYMENT_GUIDE.md) - *Instructions for hosting on Fly.io.*
+- [**Test Suite**](./docs/TEST_SUITE.md) - *Protocols for quality assurance.*
 
 ---
 
