@@ -1,4 +1,4 @@
-# The Chronicler: The Grand Test Doctrine (v2.0.0)
+# The Chronicler: The Grand Test Doctrine (v1.2.0)
 
 **Status:** The Immutable Law of Verification  
 **Architecture:** FastAPI + Supabase (PostgreSQL) + Discord Bot  

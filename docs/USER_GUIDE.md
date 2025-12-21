@@ -1,6 +1,6 @@
 # 📖 The Chronicler's User Guide
 
-**Version 2.0 - The Ascension**
+**Version 1.2 - The Ascension**
 
 Greetings, hero. This tome serves as your guide to interacting with **The Chronicler**, the arcane construct that manages our guild's records.
 

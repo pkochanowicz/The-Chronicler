@@ -4,7 +4,7 @@
 [![Discord](https://img.shields.io/badge/Discord-Classic%2B-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/fJDzq5rfAK)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Version](https://img.shields.io/badge/Version-2.0.0-gold?style=for-the-badge)](./docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.2.0-blue?style=for-the-badge)](./docs/CHANGELOG.md)
 
 **Greetings, traveler.**
 
@@ -14,7 +14,7 @@ Forged in the fires of Python and tempered by the strict laws of World of Warcra
 
 ---
 
-## ✨ Features (v2.0 "Reformation")
+## ✨ Features (v1.2 "Reformation")
 
 ### 🖋️ The Sacred Ritual of Registration
 Forget boring forms. New members are greeted by *Chronicler Thaldrin* for a cinematic, 12-step interactive interview.

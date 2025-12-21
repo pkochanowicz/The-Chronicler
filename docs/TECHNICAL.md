@@ -1,6 +1,6 @@
 # Azeroth Bound Bot - Technical Documentation
 
-**Version:** 2.0.0 (Schema Reformation & Ascension)
+**Version:** 1.2.0 (Schema Reformation & Ascension)
 **Architecture:** Path B (Webhook-Driven)
 **Last Updated:** December 21, 2025
 
