@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, AsyncEngine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from config.settings import settings
+import asyncpg # Explicitly import asyncpg
 from typing import Optional
 
 Base = declarative_base()
@@ -9,9 +9,10 @@ _engine: Optional[AsyncEngine] = None
 _AsyncSessionLocal: Optional[sessionmaker] = None
 
 def get_engine_and_session_maker():
+    from config.settings import settings # Import settings here
     global _engine, _AsyncSessionLocal
     if _engine is None or _AsyncSessionLocal is None:
-        _engine = create_async_engine(settings.DATABASE_URL, echo=True)
+        _engine = create_async_engine(settings.DATABASE_URL, echo=True, drivername='postgresql+asyncpg')
         _AsyncSessionLocal = sessionmaker(
             autocommit=False,
             autoflush=False,

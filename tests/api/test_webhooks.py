@@ -1,30 +1,31 @@
 import pytest
-from httpx import AsyncClient
-from main import app
-from fastapi.testclient import TestClient
-
-
+# from httpx import AsyncClient # No longer needed
 
 @pytest.mark.asyncio
-async def test_discord_webhook_ping(client: TestClient):
-    # Simulate a Discord PING interaction
+async def test_discord_webhook_ping(client):
+    """Test that the webhook endpoint correctly handles Discord PING events."""
+    # async_client = await async_client_fixture # No longer needed
     payload = {
         "id": "1234567890",
         "token": "a_token",
         "type": 1, # PING type
         "version": 1
     }
+    # Mock headers (in a real scenario, middleware would validate signature)
     headers = {
-        "X-Signature-Ed25519": "dummy_signature", # Placeholder, real signature would be verified by Discord.
-        "X-Signature-Timestamp": "1678886400" # Placeholder timestamp
+        "X-Signature-Ed25519": "dummy_signature",
+        "X-Signature-Timestamp": "1678886400"
     }
-    response = await async_client.post("/webhooks/discord", json=payload, headers=headers)
+    
+    response = client.post("/webhooks/discord", json=payload, headers=headers)
+    
     assert response.status_code == 200
     assert response.json() == {"type": 1}
 
 @pytest.mark.asyncio
-async def test_discord_webhook_other_interaction(client: TestClient):
-    # Simulate another interaction type (e.g., slash command)
+async def test_discord_webhook_other_interaction(client):
+    """Test that the webhook endpoint acknowledges other interaction types."""
+    # async_client = await async_client_fixture # No longer needed
     payload = {
         "id": "0987654321",
         "token": "another_token",
@@ -40,7 +41,9 @@ async def test_discord_webhook_other_interaction(client: TestClient):
         "X-Signature-Ed25519": "dummy_signature_2",
         "X-Signature-Timestamp": "1678886500"
     }
-    response = await async_client.post("/webhooks/discord", json=payload, headers=headers)
+    
+    response = client.post("/webhooks/discord", json=payload, headers=headers)
+    
     assert response.status_code == 200
+    # Currently just acknowledges
     assert response.json() == {"type": 4, "data": {"content": "Interaction received!"}}
-

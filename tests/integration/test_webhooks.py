@@ -23,6 +23,11 @@ class TestWebhooks:
     Tests for Webhook Handler endpoint and trigger logic.
     """
 
+    @pytest.fixture(autouse=True)
+    def patch_webhook_settings(self, monkeypatch, mock_settings):
+        """Autouse fixture to patch services.webhook_handler.settings."""
+        monkeypatch.setattr("services.webhook_handler.settings", mock_settings)
+
     @pytest.fixture
     def mock_request(self):
         req = MagicMock()

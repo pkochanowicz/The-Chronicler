@@ -10,7 +10,7 @@ class CharacterRepository:
         self.db = db
 
     async def create_character(self, character: pydantic_models.CharacterCreate) -> db_schemas.Character:
-        db_character = db_schemas.Character(**character.model_dump(by_alias=True))
+        db_character = db_schemas.Character(**character.model_dump(by_alias=False))
         self.db.add(db_character)
         await self.db.commit()
         await self.db.refresh(db_character)
