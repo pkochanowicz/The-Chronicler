@@ -1,10 +1,10 @@
 #!/bin/bash
 # Deploy secrets from .env to Fly.io
-# Batched version for speed and reliability
+# Batched version for speed and reliability, adapted for FastAPI/Supabase architecture
 
 set -e  # Exit on error
 
-APP_NAME="the-chronicler"
+APP_NAME="the-chronicler" # Ensure this matches your Fly.io app name
 
 echo "🔐 Deploying secrets from .env to Fly.io app: $APP_NAME"
 echo ""
@@ -30,18 +30,6 @@ fi
 echo "✓ Prerequisites verified"
 echo ""
 
-# Handle GOOGLE_CREDENTIALS_B64 encoding
-GOOGLE_CREDS_B64=""
-if [ -f credentials.json ]; then
-    echo "📋 Found credentials.json - encoding to base64..."
-    GOOGLE_CREDS_B64=$(cat credentials.json | base64 -w 0 | tr -d '\n')
-    echo "✓ Encoded: ${#GOOGLE_CREDS_B64} characters"
-    echo ""
-else
-    echo "⚠️  credentials.json not found - will use value from .env if present"
-    echo ""
-fi
-
 # Collect secrets into an array (for batching)
 declare -a SECRETS_ARRAY=()
 
@@ -64,11 +52,6 @@ while IFS='=' read -r key value; do
     [[ "$value" == "generate_"* ]] && continue
     [[ "$value" == "0" ]] && [[ "$key" =~ _ROLE_ID$ ]] && continue
 
-    # Use encoded Google credentials if available
-    if [ "$key" == "GOOGLE_CREDENTIALS_B64" ] && [ -n "$GOOGLE_CREDS_B64" ]; then
-        value="$GOOGLE_CREDS_B64"
-    fi
-
     # Add to array
     SECRETS_ARRAY+=("$key=$value")
     echo "  ✓ Queued: $key"
@@ -89,11 +72,13 @@ if [ ${#SECRETS_ARRAY[@]} -gt 0 ]; then
     echo ""
     echo "✅ All secrets staged successfully!"
     echo ""
-    echo "📝 Note: Secrets are STAGED and will be applied on first deployment"
+    echo "📝 Note: Secrets are STAGED and will be applied on next deployment or release command"
     echo "   Run: flyctl deploy"
 else
     echo "⚠️  No valid secrets found to deploy"
-    exit 1
+    # Exit 1 only if there should have been secrets, but aren't.
+    # For now, allow to proceed if intentionally no secrets (e.g. initial setup)
+    exit 0 
 fi
 
 echo ""

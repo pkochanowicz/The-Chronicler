@@ -1,122 +1,87 @@
-# Azeroth Bound Discord Bot
-# Copyright (C) 2025 [Paweł Kochanowicz - <github.com/pkochanowicz> ]
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 import pytest
-import datetime
-import os
-import base64
-from unittest.mock import MagicMock, AsyncMock
+import asyncio
+from typing import AsyncGenerator
+from sqlalchemy.ext.asyncio import AsyncSession
+from db.database import Base, get_db, get_engine_and_session_maker
+from main import app
+from fastapi.testclient import TestClient
+from config.settings import settings # Import settings
 
-# -----------------------------------------------------------------------------
-# GLOBAL TEST SETUP
-# -----------------------------------------------------------------------------
-# Force valid dummy credentials for all tests to prevent Settings init crash.
-# This must run before 'config.settings' is imported by any test module.
-os.environ["GOOGLE_CREDENTIALS_B64"] = base64.b64encode(b'{"type": "service_account"}').decode('utf-8')
-# -----------------------------------------------------------------------------
+# Use a separate test database URL
+TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/test_chronicler"
 
-@pytest.fixture
-def mock_settings(mocker):
-    """Mock configuration settings"""
-    # Patch the singleton instance attributes
-    mocker.patch("config.settings.settings.WEBHOOK_SECRET", "test_secret_123")
-    mocker.patch("config.settings.settings.DEFAULT_PORTRAIT_URL", "https://example.com/default.png")
-    return mocker
-
-@pytest.fixture
-def sample_character_data():
-    """Returns a dictionary with valid sample character data (27 columns)"""
-    return {
-        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "discord_id": "123456789",
-        "discord_name": "TestUser#1234",
-        "char_name": "Thorgar",
-        "race": "Dwarf",
-        "class": "Warrior",
-        "roles": "Tank, Melee DPS",
-        "professions": "Mining, Blacksmithing",
-        "backstory": "A brave warrior from the mountains.",
-        "personality": "Stubborn but loyal.",
-        "quotes": "For Khaz Modan!",
-        "portrait_url": "https://example.com/thorgar.png",
-        "trait_1": "Brave",
-        "trait_2": "Loyal",
-        "trait_3": "Stubborn",
-        "status": "PENDING",
-        "confirmation": True,
-        "request_sdxl": False,
-        "recruitment_msg_id": "987654321",
-        "forum_post_url": "https://discord.com/channels/1/2/3",
-        "reviewed_by": "999888777",
-        "embed_json": '[{"title": "Thorgar"}]',
-        "death_cause": None,
-        "death_story": None,
-        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "notes": "Test notes"
-    }
-
-@pytest.fixture
-def mock_discord_interaction():
-    """Mocks a Discord interaction object"""
-    interaction = AsyncMock()
-    interaction.user.id = 123456789
-    interaction.user.name = "TestUser"
-    interaction.user.discriminator = "1234"
-    interaction.user.mention = "<@123456789>"
-    interaction.guild.id = 555555
-    interaction.channel_id = 444444
+# This fixture will ensure the settings are configured for the test database
+@pytest.fixture(scope="session", autouse=True)
+def override_settings_for_tests():
+    # Patch the settings to use the test database URL
+    # This is important for db.database.get_engine_and_session_maker()
+    # to pick up the correct URL
+    original_db_url = settings.DATABASE_URL
+    settings.DATABASE_URL = TEST_DATABASE_URL
     
-    # Mock response
-    interaction.response = AsyncMock()
-    interaction.response.send_message = AsyncMock()
-    interaction.response.defer = AsyncMock()
-    interaction.followup = AsyncMock()
-    interaction.followup.send = AsyncMock()
+    # Also ensure other dummy settings are present for validation to pass
+    original_supabase_url = settings.SUPABASE_URL
+    original_supabase_key = settings.SUPABASE_KEY
+    original_discord_token = settings.DISCORD_TOKEN
+    original_webhook_secret = settings.WEBHOOK_SECRET
+
+    settings.SUPABASE_URL = "http://test-supabase.co"
+    settings.SUPABASE_KEY = "test-key"
+    settings.DISCORD_TOKEN = "test-discord-token"
+    settings.WEBHOOK_SECRET = "a_very_long_test_secret_for_webhook_validation_32_chars"
+
+    yield
+
+    # Restore original settings after tests
+    settings.DATABASE_URL = original_db_url
+    settings.SUPABASE_URL = original_supabase_url
+    settings.SUPABASE_KEY = original_supabase_key
+    settings.DISCORD_TOKEN = original_discord_token
+    settings.WEBHOOK_SECRET = original_webhook_secret
+
+
+async def override_get_db_for_tests() -> AsyncGenerator[AsyncSession, None]:
+    _, TestAsyncSessionLocal = get_engine_and_session_maker()
+    async with TestAsyncSessionLocal() as session:
+        yield session
+
+# Override the app's get_db dependency to use the test database
+app.dependency_overrides[get_db] = override_get_db_for_tests
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an instance of the default event loop for each test session."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+@pytest.fixture(scope="session", autouse=True)
+async def setup_test_db(override_settings_for_tests): # Depend on settings fixture
+    """Sets up and tears down the test database."""
+    # Ensure Base.metadata knows about all models
+    from schemas import db_schemas # noqa # pylint: disable=unused-import
     
-    return interaction
+    engine, _ = get_engine_and_session_maker()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
-@pytest.fixture
-def mock_sheets_client():
-    """Mocks the Google Sheets client"""
-    client = MagicMock()
-    sheet = MagicMock()
-    client.open_by_key.return_value.sheet1 = sheet
-    return client
+@pytest.fixture(scope="function")
+async def async_session(override_settings_for_tests) -> AsyncGenerator[AsyncSession, None]:
+    """Provides a transactional scope for each test."""
+    _, TestAsyncSessionLocal = get_engine_and_session_maker()
+    async with TestAsyncSessionLocal() as session:
+        await session.begin()  # Start a transaction
+        yield session
+        await session.rollback() # Rollback after each test
 
-@pytest.fixture
-def valid_races():
-    return [
-        "Human", "Dwarf", "Night Elf", "Gnome", "High Elf",
-        "Orc", "Undead", "Tauren", "Troll", "Goblin",
-        "Other"
-    ]
-
-@pytest.fixture
-def valid_classes():
-    return [
-        "Warrior", "Paladin", "Hunter", "Rogue", "Priest",
-        "Shaman", "Mage", "Warlock", "Druid"
-    ]
-
-@pytest.fixture
-def valid_roles():
-    return ["Tank", "Healer", "Melee DPS", "Ranged DPS", "Support"]
-
-@pytest.fixture
-def mock_complete_character_data(sample_character_data):
-    """Alias for sample_character_data to satisfy test requirements."""
-    return sample_character_data
+@pytest.fixture(scope="function")
+def client() -> TestClient:
+    """Provides a TestClient for FastAPI."""
+    # No need to override settings again, autouse fixture handles it
+    with TestClient(app) as c:
+        yield c

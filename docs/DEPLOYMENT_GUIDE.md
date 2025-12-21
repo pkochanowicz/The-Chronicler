@@ -1,3 +1,6 @@
+# DEPRECATED: This Deployment Guide is for the *previous* Google Sheets-based architecture.
+# A new deployment guide for the FastAPI/Supabase stack is required.
+
 # Azeroth Bound Bot - Deployment Guide
 
 **Version:** 2.0.0 (Schema Reformation)  

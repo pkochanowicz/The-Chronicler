@@ -1,4 +1,8 @@
-# Project Patterns & Development Guidelines
+# DEPRECATED CONTEXT: This document details AI agent operations and solutions specific to the *previous* Google Sheets-based architecture.
+# Please refer to updated documentation for current operational guidelines with the FastAPI/Supabase stack.
+
+# AI Agent Code Operations and Pitfall Management for The Chronicler
+
 
 **Version:** 2.0.0
 **Purpose:** Documented development patterns, architectural decisions, and implementation conventions

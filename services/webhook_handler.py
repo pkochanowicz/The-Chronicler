@@ -24,7 +24,7 @@ import asyncio
 from aiohttp import web
 from config.settings import settings
 from utils.embed_parser import parse_embed_json, build_cemetery_embed
-from services.sheets_service import CharacterRegistryService
+from services.sheets_service import GoogleSheetsService
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ registry = None
 def get_registry():
     global registry
     if not registry:
-        registry = CharacterRegistryService()
+        registry = GoogleSheetsService()
     return registry
 
 async def health_handler(request):

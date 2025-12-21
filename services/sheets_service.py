@@ -499,4 +499,4 @@ class GoogleSheetsService: # Renamed class
             return False
 
 # Initialize the service globally
-google_sheets_service = GoogleSheetsService()
+# google_sheets_service = GoogleSheetsService()

@@ -1,3 +1,6 @@
+# DEPRECATED: This document is obsolete as the project is migrating away from Google Apps Script.
+# Please refer to updated deployment and architectural documentation for the new FastAPI/Supabase stack.
+
 # Google Apps Script Setup Guide
 
 **Purpose:** Configure webhook triggers and automated backups for the Azeroth Bound Bot

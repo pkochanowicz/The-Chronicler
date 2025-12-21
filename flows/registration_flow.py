@@ -28,7 +28,7 @@ from domain.validators import (
     VALID_RACES, VALID_CLASSES, VALID_ROLES, VALID_PROFESSIONS,
     validate_race, validate_class, validate_roles, validate_professions, validate_url
 )
-from services.sheets_service import CharacterRegistryService
+from services.sheets_service import GoogleSheetsService
 from services.webhook_handler import handle_post_to_recruitment # Or trigger mechanism
 from utils.embed_parser import build_character_embeds, serialize_embeds
 from config.settings import settings
@@ -642,7 +642,7 @@ class RegistrationFlow(InteractiveFlow):
                 "embed_json": embed_json
             }
 
-            registry = CharacterRegistryService()
+            registry = GoogleSheetsService()
             success = registry.log_character(char_data)
 
             if success:

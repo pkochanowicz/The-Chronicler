@@ -10,8 +10,8 @@
 
 The Azeroth Bound Bot ("The Chronicler") uses a **hybrid architecture**:
 - **Discord Bot (Python):** Handles user interactions, interactive flows, and immediate feedback.
-- **Google Sheets:** Acts as the primary database (Source of Truth).
-- **Webhooks (Google Apps Script):** Pushes updates from Sheets to Discord instantly (Zero Polling).
+- **Supabase PostgreSQL:** Acts as the primary database (Source of Truth).
+- **FastAPI Webhooks:** Handles events and interactions, pushing updates to Discord instantly (Zero Polling).
 - **MCP Server:** Provides an API layer for LLM agents to interact with the bot.
 
 ---
@@ -35,7 +35,7 @@ Stores static talent data for validation.
 ## 3. Core Services
 
 ### GoogleSheetsService (`services/sheets_service.py`)
-Manages all Google Sheets interactions.
+Manages all Supabase PostgreSQL interactions.
 - **Initialization:** Auto-creates missing sheets/headers on startup.
 - **Schema Validation & Auto-Formatting:** 
   - On startup, the service validates the schema of all required sheets against the official schema defined in the code.

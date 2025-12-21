@@ -2,7 +2,7 @@ import asyncio
 import logging
 from dotenv import load_dotenv
 from config.settings import settings
-from services.sheets_service import google_sheets_service
+# from services.sheets_service import google_sheets_service # Temporarily commented out
 from mcp.server import run_mcp_server
 
 # Configure logging
@@ -52,7 +52,7 @@ async def main():
     # await site.start()
     
     # So we need to sleep forever.
-    await run_mcp_server(mock_client, google_sheets_service)
+    await run_mcp_server(mock_client, None)
     
     # Keep alive
     logger.info("MCP Server is running. Press Ctrl+C to stop.")

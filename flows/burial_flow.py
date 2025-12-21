@@ -23,7 +23,7 @@ import asyncio
 import discord
 from discord.ui import View, Button, Select, Modal, TextInput
 from flows.base_flow import InteractiveFlow
-from services.sheets_service import CharacterRegistryService
+from services.sheets_service import GoogleSheetsService
 from utils.embed_parser import build_character_embeds, parse_embed_json
 from domain.models import Character, STATUS_DECEASED
 
@@ -115,9 +115,7 @@ class BurialFlow(InteractiveFlow):
         )
         
         msg = await self.wait_for_message()
-        search_name = msg.content.strip()
-        
-        registry = CharacterRegistryService()
+        registry = GoogleSheetsService()
         char_data = registry.get_character_by_name(search_name)
         
         if not char_data:
@@ -253,7 +251,7 @@ class BurialFlow(InteractiveFlow):
         try:
             char_name = self.data["character_data"].get("char_name")
             
-            registry = CharacterRegistryService()
+            registry = GoogleSheetsService()
             success = registry.update_character_status(
                 char_name,
                 STATUS_DECEASED, # Triggers webhook

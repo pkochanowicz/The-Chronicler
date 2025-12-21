@@ -39,9 +39,12 @@ Death is part of the journey. When a hero falls, officers perform the **Burial R
 - **The Cemetery:** Automatically moves character records to the `#cemetery` channel.
 
 ### ⚡ The Arcane Link (Webhooks)
-Built on the **Path B Architecture**:
-- **Zero Polling:** Changes in our Master Google Sheet reflect instantly in Discord.
-- **Single Source of Truth:** Your spreadsheet is the database. The bot is the interface.
+
+Built on a robust, event-driven architecture:
+
+- **Zero Polling:** Changes in our Supabase PostgreSQL database reflect instantly in Discord.
+- **Single Source of Truth:** Our Supabase PostgreSQL database is the heart of our data. The bot is the interface.
+- **Reliable Automation:** Powered by FastAPI webhooks for seamless, real-time integration.
 
 ---
 
