@@ -131,6 +131,11 @@ The following scenarios are explicitly required to address the "Skeptic" agent's
 *   **Scenario:** Two officers click "Approve" on the same recruitment thread at the exact same second.
 *   **Requirement:** Database constraint or application logic must handle the race condition. Only one should succeed; the second should receive "Already processed".
 
+### 5. The "Zombie" (Recovery after Crash)
+*   **Scenario:** Bot crashes during Step 6 of registration.
+*   **Requirement:** Upon restart, the state is lost (in-memory) but the partial DB record (if any) must not block a new attempt.
+*   **Test:** Simulate crash, then restart registration for same user.
+
 ---
 
 ## 📊 V. Pre-Commit Guarantees
