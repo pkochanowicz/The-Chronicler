@@ -31,7 +31,7 @@ from domain.validators import (
 from services.sheets_service import GoogleSheetsService
 from services.webhook_handler import handle_post_to_recruitment # Or trigger mechanism
 from utils.embed_parser import build_character_embeds, serialize_embeds
-from config.settings import settings
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -473,7 +473,7 @@ class RegistrationFlow(InteractiveFlow):
                         # Instead, we will directly call the function from mcp.tools,
                         # passing the necessary settings and bot instance.
                         from mcp.tools import MCPTools # Import locally to avoid circular
-                        mcp_tools_instance = MCPTools(settings, self.bot, None) # sheets_service not needed here
+                        mcp_tools_instance = MCPTools(get_settings(), self.bot, None) # sheets_service not needed here
                         
                         thread_name = f"Portrait: {self.data['char_name']} ({self.data['discord_id']})"
                         response = await mcp_tools_instance.post_image_to_graphics_storage(attachment.url, attachment.filename, thread_name=thread_name)
@@ -485,25 +485,25 @@ class RegistrationFlow(InteractiveFlow):
                             await interaction.followup.send("✅ Image uploaded and stored successfully! Your portrait URL has been updated.", ephemeral=True)
                         else:
                             await interaction.followup.send(f"❌ Failed to store image: {response['error']}\nUsing default placeholder instead.", ephemeral=True)
-                            self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                            self.data["portrait_url"] = get_settings().DEFAULT_PORTRAIT_URL
                             self.data["request_sdxl"] = False
                     else:
                         await interaction.followup.send("❌ That was not an image file. Using default placeholder instead.", ephemeral=True)
-                        self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                        self.data["portrait_url"] = get_settings().DEFAULT_PORTRAIT_URL
                         self.data["request_sdxl"] = False
                 else:
                     await interaction.followup.send("❌ No image attached. Using default placeholder instead.", ephemeral=True)
-                    self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                    self.data["portrait_url"] = get_settings().DEFAULT_PORTRAIT_URL
                     self.data["request_sdxl"] = False
 
             except asyncio.TimeoutError:
                 await interaction.followup.send("⏰ You took too long to upload an image. Using default placeholder instead.", ephemeral=True)
-                self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                self.data["portrait_url"] = get_settings().DEFAULT_PORTRAIT_URL
                 self.data["request_sdxl"] = False
             except Exception as e:
                 logger.error(f"Error during image upload in registration flow: {e}")
                 await interaction.followup.send("❌ An unexpected error occurred during image upload. Using default placeholder instead.", ephemeral=True)
-                self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                self.data["portrait_url"] = get_settings().DEFAULT_PORTRAIT_URL
                 self.data["request_sdxl"] = False
             
             # The flow continues after image handling
@@ -527,18 +527,18 @@ class RegistrationFlow(InteractiveFlow):
                     f"❌ Invalid URL: {str(e)}\n\nUsing default placeholder instead.",
                     ephemeral=True
                 )
-                self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+                self.data["portrait_url"] = get_settings().DEFAULT_PORTRAIT_URL
                 self.data["request_sdxl"] = False
                 view.stop()
 
         async def default_callback(interaction):
-            self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
+            self.data["portrait_url"] = get_settings().DEFAULT_PORTRAIT_URL
             self.data["request_sdxl"] = False
             await interaction.response.defer()
             view.stop()
 
         async def ai_callback(interaction):
-            self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL  # Will be replaced by AI later
+            self.data["portrait_url"] = get_settings().DEFAULT_PORTRAIT_URL  # Will be replaced by AI later
             self.data["request_sdxl"] = True
             await interaction.response.defer()
             view.stop()

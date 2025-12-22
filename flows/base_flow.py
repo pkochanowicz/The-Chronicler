@@ -20,7 +20,7 @@ Common logic for multi-step interactive commands.
 """
 import asyncio
 import discord
-from config.settings import settings
+from config.settings import get_settings
 
 class InteractiveFlow:
     """Base class for interactive flows."""
@@ -29,7 +29,7 @@ class InteractiveFlow:
         self.interaction = interaction
         self.user = interaction.user
         self.bot = interaction.client
-        self.timeout = settings.INTERACTIVE_TIMEOUT_SECONDS
+        self.timeout = get_settings().INTERACTIVE_TIMEOUT_SECONDS
         self.data = {}
         self.message = None # The message we are updating/using for UI
 

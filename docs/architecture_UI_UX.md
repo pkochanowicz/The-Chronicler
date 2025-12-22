@@ -137,7 +137,7 @@ These components are utilized by both the Chronicler Gateway Service and the MCP
 
 ### 2.3. Data Storage: The Heart of Truth
 
-PostgreSQL, hosted via Supabase, is our single, canonical source of truth, ensuring data integrity, scalability, and complex querying capabilities.
+PostgreSQL, hosted via Supabase, is our single, canonical source of truth, ensuring data integrity, scalability, and complex querying capabilities. For development and testing environments, `testcontainers` are used to provide ephemeral, isolated PostgreSQL instances. The schema itself is defined through **SQLAlchemy models within `schemas/db_schemas.py`**, which serve as the definitive blueprint. **Alembic** is the designated tool for managing and applying all database migrations, ensuring controlled and versioned schema evolution.
 
 #### 2.3.1 Canonical Data Enums (PostgreSQL Blueprint)
 
@@ -394,7 +394,7 @@ This table stores comprehensive metadata for all images used by The Chronicler, 
 
 ### 2.5. Data Synchronization: The Flow of Truth
 
-The mechanism for propagating data changes from our source of truth (PostgreSQL) to our frontend (Discord) is pivotal.
+The mechanism for propagating data changes from our source of truth (PostgreSQL) to our frontend (Discord) is pivotal. Schema evolution is managed exclusively through **Alembic migrations**, applied during deployment via Fly.io's `release_command`.
 
 -   **PostgreSQL Database Event Triggers:** This is the primary, real-time, and robust mechanism. Triggers on database tables will fire upon `INSERT`, `UPDATE`, or `DELETE` operations.
 -   **Chronicler Gateway Service as Event Orchestrator:** These database events will signal the Chronicler Gateway Service. This service will then process these events, identify the relevant Discord entities (threads, messages), and execute the necessary Discord API calls.
@@ -404,7 +404,7 @@ The mechanism for propagating data changes from our source of truth (PostgreSQL)
 
 ### 2.6. MCP Platform: The Testing Crucible
 
-As defined in `2.2.2 The MCP (Multi-Agent Control Plane) Platform (Development & LLM Operations)`, this platform serves as a **robust, trustworthy testing environment**. It is strictly for development and testing, and will not be deployed to production for core DB-Discord synchronization. This allows for rigorous validation of all architectural components, especially the complex data flows, Event Triggers, and Discord interactions, before live deployment. User-driven operations (via LLM) will leverage this testing framework to achieve complex Discord operations.
+As defined in `2.2.2 The MCP (Multi-Agent Control Plane) Platform (Development & LLM Operations)`, this platform serves as a **robust, trustworthy testing environment**. It is strictly for development and testing, and will not be deployed to production for core DB-Discord synchronization. This allows for rigorous validation of all architectural components, especially the complex data flows, Event Triggers, and Discord interactions, before live deployment. User-driven operations (via LLM) will leverage this testing framework to achieve complex Discord operations. For a comprehensive overview of the testing hierarchy, specific test scopes, and key doctrines, refer to `docs/TEST_SUITE.md`.
 
 ## 3. User Experience (UX) Design Principles: Crafting Immersion
 

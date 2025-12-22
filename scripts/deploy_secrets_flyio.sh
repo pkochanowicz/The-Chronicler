@@ -1,6 +1,5 @@
-#!/bin/bash
 # Deploy secrets from .env to Fly.io
-# Improved version with batching and auto-encoding of Google credentials
+# Improved version with batching
 
 set -e  # Exit on error
 
@@ -33,18 +32,6 @@ echo "✓ .env file found"
 echo "✓ flyctl installed and authenticated"
 echo ""
 
-# Handle GOOGLE_CREDENTIALS_B64 specially
-if [ -f credentials.json ]; then
-    echo "📋 Found credentials.json - encoding to base64..."
-    GOOGLE_CREDS_B64=$(cat credentials.json | base64 | tr -d '\n')
-    echo "✓ Google credentials encoded (${#GOOGLE_CREDS_B64} chars)"
-else
-    echo "⚠️  Warning: credentials.json not found"
-    echo "   Make sure GOOGLE_CREDENTIALS_B64 is already set in .env"
-    GOOGLE_CREDS_B64=""
-fi
-echo ""
-
 # Collect all secrets (batch approach for speed)
 declare -a SECRETS=()
 
@@ -68,24 +55,10 @@ while IFS='=' read -r key value; do
     # Skip 0 values for role IDs (placeholders)
     [[ "$value" == "0" ]] && [[ "$key" =~ _ROLE_ID$ ]] && continue
 
-    # Use encoded credentials for GOOGLE_CREDENTIALS_B64
-    if [ "$key" == "GOOGLE_CREDENTIALS_B64" ] && [ ! -z "$GOOGLE_CREDS_B64" ]; then
-        value="$GOOGLE_CREDS_B64"
-    fi
-
     # Add to secrets array
     SECRETS+=("$key=$value")
     echo "  ✓ Queued: $key"
 done < .env
-
-# Append GOOGLE_CREDENTIALS_B64 if it wasn't in .env but we have it from credentials.json
-# Check if GOOGLE_CREDENTIALS_B64 is already in SECRETS array is hard in bash arrays,
-# but we can just append it if we have it. flyctl will update.
-if [ ! -z "$GOOGLE_CREDS_B64" ]; then
-     SECRETS+=("GOOGLE_CREDENTIALS_B64=$GOOGLE_CREDS_B64")
-     echo "  ✓ Queued: GOOGLE_CREDENTIALS_B64 (from file)"
-fi
-
 
 echo ""
 echo "🚀 Deploying ${#SECRETS[@]} secrets to Fly.io (batched)..."

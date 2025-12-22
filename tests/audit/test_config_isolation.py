@@ -1,6 +1,6 @@
 import pytest
 import os
-from config.settings import settings
+from config.settings import get_settings
 
 def test_google_sheet_id_not_required():
     """
@@ -27,12 +27,12 @@ def test_google_sheet_id_not_required():
     pass 
     
     # Actually, let's verify that DATABASE_URL IS required.
-    assert settings.DATABASE_URL, "DATABASE_URL is mandatory for v2.0"
+    assert get_settings().DATABASE_URL, "DATABASE_URL is mandatory for v2.0"
     
 def test_database_url_isolation():
     """Ensures we are not pointing to a production DB in tests."""
     # This is a heuristic check.
-    if "fly.dev" in settings.DATABASE_URL or "aws" in settings.DATABASE_URL:
+    if "fly.dev" in get_settings().DATABASE_URL or "aws" in get_settings().DATABASE_URL:
         # If we are running tests, we should ideally be local or localhost
         # BUT CI might use a real URL. 
         # Warning only.

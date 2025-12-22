@@ -12,9 +12,7 @@ class Settings(BaseSettings):
     # Discord Configuration
     GUILD_ID: int = Field(..., gt=0)
     RECRUITMENT_CHANNEL_ID: int
-    FORUM_CHANNEL_ID: int # Was CHARACTER_SHEET_VAULT_CHANNEL_ID in prev version, reverting to match tests/legacy for now, or updating tests?
-    # Test expects FORUM_CHANNEL_ID. Architecture says #character_sheet_vault. 
-    # Let's keep FORUM_CHANNEL_ID as the variable name for the ID of that channel.
+    CHARACTER_SHEET_VAULT_CHANNEL_ID: int # Forum channel for approved character sheets
     CEMETERY_CHANNEL_ID: int
 
     # Guild Member Role IDs
@@ -74,4 +72,13 @@ class Settings(BaseSettings):
              raise ValueError("At least one Guild Member Role ID must be configured.")
         return self
 
-settings = Settings()
+_settings_instance: Optional[Settings] = None
+
+def get_settings() -> Settings:
+    global _settings_instance
+    if _settings_instance is None:
+        _settings_instance = Settings()
+    return _settings_instance
+
+# Do not instantiate at module level
+# settings = Settings()

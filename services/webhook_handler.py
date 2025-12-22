@@ -22,7 +22,7 @@ import logging
 import json
 import asyncio
 from aiohttp import web
-from config.settings import settings
+from config.settings import get_settings
 from utils.embed_parser import parse_embed_json, build_cemetery_embed
 from services.sheets_service import GoogleSheetsService
 from datetime import datetime, timezone
@@ -51,9 +51,9 @@ async def start_webhook_server(discord_bot):
     app.router.add_get('/health', health_handler)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', settings.PORT)
+    site = web.TCPSite(runner, '0.0.0.0', get_settings().PORT)
     await site.start()
-    logger.info(f"Webhook server started on port {settings.PORT}")
+    logger.info(f"Webhook server started on port {get_settings().PORT}")
 
 async def handle_webhook(request):
     """Handle incoming webhook requests."""
@@ -62,7 +62,7 @@ async def handle_webhook(request):
     except json.JSONDecodeError:
         return web.Response(status=400, text="Invalid JSON")
 
-    if data.get("secret") != settings.WEBHOOK_SECRET:
+    if data.get("secret") != get_settings().WEBHOOK_SECRET:
         logger.warning("Invalid webhook secret attempt")
         return web.Response(status=400, text="Invalid secret")
 
@@ -92,25 +92,25 @@ async def handle_post_to_recruitment(character_data):
         return
 
     try:
-        channel_id = settings.RECRUITMENT_CHANNEL_ID
+        channel_id = get_settings().RECRUITMENT_CHANNEL_ID
         channel = bot.get_channel(channel_id) or await bot.fetch_channel(channel_id)
         
         embed_json = character_data.get("embed_json", "[]")
         embeds = parse_embed_json(embed_json)
         
         mentions = []
-        if settings.PATHFINDER_ROLE_MENTION:
-            mentions.append(settings.PATHFINDER_ROLE_MENTION)
-        if settings.TRAILWARDEN_ROLE_MENTION:
-            mentions.append(settings.TRAILWARDEN_ROLE_MENTION)
+        if get_settings().PATHFINDER_ROLE_MENTION:
+            mentions.append(get_settings().PATHFINDER_ROLE_MENTION)
+        if get_settings().TRAILWARDEN_ROLE_MENTION:
+            mentions.append(get_settings().TRAILWARDEN_ROLE_MENTION)
             
         content = f"New Character Registration: {character_data.get('char_name')} ({character_data.get('discord_name')})\n{' '.join(mentions)}"
         
         message = await channel.send(content=content, embeds=embeds)
 
-        await message.add_reaction(settings.APPROVE_EMOJI)
+        await message.add_reaction(get_settings().APPROVE_EMOJI)
         await asyncio.sleep(0.5)  # 500ms delay to avoid burst rate limits
-        await message.add_reaction(settings.REJECT_EMOJI)
+        await message.add_reaction(get_settings().REJECT_EMOJI)
 
         # Save recruitment message ID back to Google Sheets
         char_name = character_data.get("char_name")
@@ -163,9 +163,9 @@ async def handle_initiate_burial(character_data):
         vault_thread = bot.get_channel(thread_id) or await bot.fetch_channel(thread_id)
 
         # 2. Get cemetery forum channel
-        cemetery_channel = bot.get_channel(settings.CEMETERY_CHANNEL_ID)
+        cemetery_channel = bot.get_channel(get_settings().CEMETERY_CHANNEL_ID)
         if not cemetery_channel:
-            cemetery_channel = await bot.fetch_channel(settings.CEMETERY_CHANNEL_ID)
+            cemetery_channel = await bot.fetch_channel(get_settings().CEMETERY_CHANNEL_ID)
 
         # 3. Create NEW cemetery thread with memorial embed
         char_name = character_data.get("char_name")

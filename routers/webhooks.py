@@ -3,12 +3,13 @@ import hmac
 import hashlib
 from typing import Optional
 
-from config.settings import settings
+from config.settings import get_settings
 
 router = APIRouter()
 
 # In a real scenario, you'd verify the Discord signature header.
 # For simplicity here, we're just checking a shared secret.
+settings = get_settings() # Get settings instance
 WEBHOOK_SECRET = settings.WEBHOOK_SECRET
 
 @router.post("/discord")

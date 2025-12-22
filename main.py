@@ -14,7 +14,7 @@ logger.info("Initializing application module...")
 try:
     from db.database import init_db
     from services.discord_client import bot
-    from config.settings import settings
+    from config.settings import get_settings
     from routers import characters, webhooks, health
 except Exception as e:
     logger.critical(f"Failed to import dependencies: {e}", exc_info=True)
@@ -38,11 +38,12 @@ async def load_extensions():
 
 async def start_discord_bot():
     """Start the Discord bot in the background."""
+    settings = get_settings() # Get settings instance
     try:
         async with bot:
             await load_extensions()
             logger.info("Starting Discord bot...")
-            await bot.start(settings.DISCORD_TOKEN)
+            await bot.start(settings.DISCORD_BOT_TOKEN) # Use settings.DISCORD_BOT_TOKEN
     except Exception as e:
         logger.critical(f"Discord bot task failed: {e}", exc_info=True)
 

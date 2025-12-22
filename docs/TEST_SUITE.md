@@ -10,6 +10,22 @@
 
 We adhere to a strict testing pyramid. Leaking abstractions between layers is a violation of protocol.
 
+### 0. 🏛️ Schema Definition & Migration Tests (The Blueprint)
+*   **Scope:** Verification that the live database schema (on Supabase or Testcontainers) precisely matches the SQLAlchemy models defined in `schemas/db_schemas.py` and the manifesto in `docs/_SCHEMA_IMPLEMENTATION_PLAN.md`.
+*   **Dependencies:** Live database (Supabase for E2E, Testcontainers for Integration/CI).
+*   **Speed:** Moderate (requires DB connection).
+*   **Location:** `tests/schema/` (new directory)
+*   **Key Doctrine:**
+    *   **Truth from Models:** The SQLAlchemy models in `schemas/db_schemas.py` are the absolute source of truth for the database schema.
+    *   **Plan Compliance:** The schema must verify against the checklist in `docs/_SCHEMA_IMPLEMENTATION_PLAN.md`.
+    *   **Alembic Compliance:** Alembic migrations (`alembic/versions/*.py`) must always reflect the current state of these models.
+    *   **Table Presence:** Tests verify all tables (e.g., `characters`, `talents`, `images`) exist as defined.
+    *   **Column Correctness:** Tests verify column names, types, nullability, and defaults for all tables.
+    *   **Constraint Integrity:** Tests verify primary keys, unique constraints, and foreign key relationships are correctly established.
+    *   **Enum Accuracy:** Tests ensure PostgreSQL ENUM types align with SQLAlchemy model definitions.
+    *   **Migration Idempotency:** Applying `alembic upgrade head` twice must not cause errors or unintended changes. (Tested during development, not a run-time test).
+    *   **No Legacy Schema Creation:** No code paths should exist for creating schema directly via `Base.metadata.create_all()` outside of Alembic.
+
 ### 1. 🛡️ Unit Tests (The Foundation)
 *   **Scope:** Pure logic, isolated functions, Pydantic models, validators.
 *   **Dependencies:** ZERO. No DB, no Discord, no Network.

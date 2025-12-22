@@ -5,6 +5,41 @@ All notable changes to **The Chronicler** project will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2025-12-22 "Schema Alignment"
+
+### 🛡️ Schema Reformation
+- **Strict Schema Alignment:** Updated `schemas/db_schemas.py` to rigidly adhere to the canonical definitions in `docs/architecture_UI_UX.md`.
+  - **Images Table:** Fully implemented the comprehensive `images` table schema with all metadata fields (`img_graphics_vault_link`, `usage_context`, `category_tags`, etc.).
+  - **Character Table:** Corrected `roles` field to use `TEXT[]` (Array of Strings) instead of Enum Array for robust Postgres compatibility, and ensured strict mapping of all Enums.
+  - **Data Types:** Enforced `BigInteger` for all IDs to future-proof against overflow, and added `JSONB` fields (`embed_json`, `talents_json`) for flexible metadata storage.
+- **Alembic Migration:** Generated `alembic/versions/a954badedcfe_align_schema_with_docs.py` which captures the precise delta to bring the database into full compliance with the documentation.
+- **Validation Layer:** Updated `models/pydantic_models.py` (`CharacterInDB`, `CharacterCreate`) to mirror the updated database schema, ensuring `discord_username` and other critical fields are validated correctly.
+
+### 🧪 Test Infrastructure
+- **Schema Integrity Test:** Implemented `tests/schema/test_schema_integrity.py` to automatically verify that the codebase's SQLAlchemy models contain every table and column mandated by the architecture documentation.
+
+## [2.1.0] - 2025-12-22 "The Doctrine of Forging"
+
+### 🛡️ Schema Reformation
+- **Alembic Migration System:** Fully established Alembic as the sole mechanism for schema management.
+  - Implemented `release_command` in `fly.toml` to auto-apply migrations on deployment.
+  - Refactored migration script `ffa9e5fe9c90` to robustly handle both "fresh install" (empty DB) and "legacy upgrade" scenarios via conditional table creation.
+- **Test Doctrine Reforged:**
+  - Enforced "Schema Tests First" doctrine.
+  - Created `tests/schema/test_alembic_migrations.py` to verify migration idempotency and correctness against an empty Postgres container.
+  - Verified 100% schema integrity between `docs/architecture_UI_UX.md`, SQLAlchemy models, and the database.
+
+### 🧪 Test Infrastructure
+- **Config Isolation:** Fixed critical `ImportError` issues in `config/settings.py` by refactoring dependent services (`sheets_service.py`, `webhook_handler.py`) to use lazy `get_settings()` calls instead of import-time instantiation.
+- **Environment Patching:** Hardened `tests/conftest.py` to ensure environment variables are present during test collection, preventing Pydantic validation crashes.
+- **Schema Test Suite:** Added comprehensive tests for table existence (`test_db_schema.py`) and migration logic (`test_alembic_migrations.py`).
+
+### 📚 Documentation
+- **Deployment Guide:** Updated `docs/DEPLOYMENT_GUIDE.md` to reflect the new Fly.io + Supabase + Alembic architecture.
+- **Test Suite:** Updated `docs/TEST_SUITE.md` to enshrine the "Schema Definition" testing layer.
+
+---
+
 ## [1.2.0] - 2025-12-21 "Reformation"
 
 ### 🚀 Major Architectural Shift
@@ -12,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Single Source of Truth:** The database is now the definitive authority for all character, guild bank, and talent data. Discord serves strictly as a frontend interface.
 - **FastAPI Gateway:** Introduced a production-grade FastAPI application (`main.py`) to serve as the central gateway for webhooks and health checks, replacing the ad-hoc script execution.
 - **Lazy Loading Strategy:** Implemented lazy initialization for heavy services (like Google Sheets legacy adapters) to prevent startup timeouts on Fly.io.
+- **Database Schema Management (Alembic):**
+  - Integrated Alembic for robust, version-controlled database schema migrations.
+  - Successfully generated and applied the initial migration script based on SQLAlchemy models defined in `schemas/db_schemas.py`, establishing the core database schema on Supabase.
+  - **Automated Migrations on Fly.io:** Configured `fly.toml` with a `release_command` to automatically apply Alembic migrations (`alembic upgrade head`) during Fly.io deployments, ensuring schema consistency across environments.
 
 ### ✨ New Features
 - **Guild Bank 2.0:** A completely rewritten banking system with robust transaction tracking (`deposit`, `withdraw`, `view`, `mydeposits`).
@@ -58,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All E2E tests (`tests/e2e/`) are now passing, completing the test-driven implementation for this phase.
 
 ### 🔥 Removed / Deprecated
+- **Legacy Models:** Removed `domain/models.py` (legacy dataclasses) in favor of SQLAlchemy + Pydantic v2 models.
 - **Google Sheets as Database:** Removed the concept of Sheets as the primary data store. (Sheets service retained only for legacy import/export utilities).
 - **Google Apps Script:** The Apps Script webhook relay has been deprecated in favor of direct database event triggers (architecture planned).
 - **Legacy Documentation:** Purged `MASTER_BLUEPRINT_V2.md`, `GOOGLE_APPS_SCRIPT_SETUP.md`, and `AI_AGENTS_CODE_OPERATIONS.md` to eliminate confusion.

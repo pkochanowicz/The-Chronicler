@@ -6,12 +6,12 @@ from uuid import UUID
 
 # Use the 'db_session' fixture from conftest.py which connects to the Testcontainer
 @pytest.mark.asyncio
-async def test_create_character_flow(db_session):
+async def test_create_character_flow(async_session):
     """
     Tier 3 Integration Test: The Engine.
     Verifies CharacterService + Repository + Real DB (Container).
     """
-    service = CharacterService(db_session)
+    service = CharacterService(async_session)
     
     # 1. Prepare Data
     char_data = pydantic_models.CharacterCreate(
@@ -41,9 +41,9 @@ async def test_create_character_flow(db_session):
     assert fetched_char.discord_id == "999888777"
 
 @pytest.mark.asyncio
-async def test_duplicate_character_prevention(db_session):
+async def test_duplicate_character_prevention(async_session):
     """Verifies that we cannot create two characters with the same ID (if constraint exists) or name."""
-    service = CharacterService(db_session)
+    service = CharacterService(async_session)
     
     char_data = pydantic_models.CharacterCreate(
         discord_id="111222333",

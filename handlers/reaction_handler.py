@@ -21,9 +21,7 @@ Handles officer approval/rejection via emoji reactions.
 import logging
 import discord
 from discord.ext import commands
-from config.settings import settings
-from services.sheets_service import GoogleSheetsService
-from domain.models import STATUS_REGISTERED, STATUS_REJECTED
+from config.settings import get_settings # Updated import
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +29,7 @@ class ReactionHandler(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.registry = GoogleSheetsService()
+        self.settings = get_settings()
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):
@@ -39,7 +38,7 @@ class ReactionHandler(commands.Cog):
             return
 
         # Check channel
-        if reaction.message.channel.id != settings.RECRUITMENT_CHANNEL_ID:
+        if reaction.message.channel.id != self.settings.RECRUITMENT_CHANNEL_ID:
             return
 
         # Check that user is a guild member (not DM)
@@ -49,14 +48,14 @@ class ReactionHandler(commands.Cog):
 
         # Check permission (Officer roles only)
         user_roles = [r.id for r in user.roles]
-        allowed_roles = settings.OFFICER_ROLE_IDS  # Officers approve
+        allowed_roles = self.settings.OFFICER_ROLE_IDS  # Officers approve
         if not any(rid in user_roles for rid in allowed_roles):
             logger.debug(f"Reaction from non-officer {user.id}, ignoring")
             return
 
         # Check emoji
         emoji = str(reaction.emoji)
-        if emoji not in [settings.APPROVE_EMOJI, settings.REJECT_EMOJI]:
+        if emoji not in [self.settings.APPROVE_EMOJI, self.settings.REJECT_EMOJI]:
             return
 
         # Find character by message ID
@@ -75,10 +74,10 @@ class ReactionHandler(commands.Cog):
         if current_status in [STATUS_REGISTERED, STATUS_REJECTED]:
             return # Already handled
 
-        if emoji == settings.APPROVE_EMOJI:
+        if emoji == self.settings.APPROVE_EMOJI:
             # Approve
             await self._approve_character(char_name, discord_id, user, reaction.message)
-        elif emoji == settings.REJECT_EMOJI:
+        elif emoji == self.settings.REJECT_EMOJI:
             # Reject
             await self._reject_character(char_name, discord_id, user, reaction.message)
 
@@ -135,12 +134,12 @@ class ReactionHandler(commands.Cog):
 
     async def _create_vault_post(self, char_name, embeds):
         """Create a thread in the character vault."""
-        forum_channel = self.bot.get_channel(settings.FORUM_CHANNEL_ID)
+        forum_channel = self.bot.get_channel(self.settings.CHARACTER_SHEET_VAULT_CHANNEL_ID)
         if not forum_channel:
-            error_msg = f"❌ CRITICAL ERROR: Forum channel (ID: {settings.FORUM_CHANNEL_ID}) not found! Cannot create character vault post. Please check bot configuration."
+            error_msg = f"❌ CRITICAL ERROR: Character Sheet Vault channel (ID: {self.settings.CHARACTER_SHEET_VAULT_CHANNEL_ID}) not found! Cannot create character vault post. Please check bot configuration."
             logger.error(error_msg)
             # This is called from _approve_character which has try/except, so we can raise
-            raise ValueError(f"Forum channel {settings.FORUM_CHANNEL_ID} not found")
+            raise ValueError(f"Character Sheet Vault channel {self.settings.CHARACTER_SHEET_VAULT_CHANNEL_ID} not found")
             
         # Forum channels use start_thread/create_thread
         # If it's a ForumChannel (discord.ForumChannel), we use create_thread(name=..., content=..., embed=...)
@@ -166,7 +165,6 @@ class ReactionHandler(commands.Cog):
             # Or pass embeds=[...] if supported?
             # It seems 'embed' is singular in some versions?
             # Let's assume singular for safety or check docs.
-            # Actually, let's just send the rest if needed.
             
             if len(embeds) > 1:
                 await thread.send(embeds=embeds[1:])

@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 import gspread
 from google.oauth2.service_account import Credentials
 import json
-from config.settings import settings
+from config.settings import get_settings
 from domain.talent_data import TALENT_DATA # Import the mutable TALENT_DATA dict
 
 
@@ -102,10 +102,10 @@ class GoogleSheetsService: # Renamed class
         """Establish connection to Google Sheets workbook."""
         try:
             creds = Credentials.from_service_account_file(
-                settings.GOOGLE_CREDENTIALS_FILE, scopes=SCOPES
+                get_settings().GOOGLE_CREDENTIALS_FILE, scopes=SCOPES
             )
             self.client = gspread.authorize(creds)
-            self.workbook = self.client.open_by_key(settings.GOOGLE_SHEET_ID)
+            self.workbook = self.client.open_by_key(get_settings().GOOGLE_SHEET_ID)
             logger.info("Successfully connected to Google Sheets workbook.")
         except Exception as e:
             logger.error(f"Failed to connect to Google Sheets workbook: {e}")
@@ -129,7 +129,7 @@ class GoogleSheetsService: # Renamed class
             
             if not is_valid:
                 logger.error(f"SCHEMA ERROR for worksheet '{sheet_name}':\n{error_msg}")
-                if settings.AUTOFORMAT_SHEETS_ON_STARTUP:
+                if get_settings().AUTOFORMAT_SHEETS_ON_STARTUP:
                     self._format_sheet(worksheet, schema)
                     # Re-build column mapping after formatting
                     column_mapping = self._build_column_mapping(worksheet)
