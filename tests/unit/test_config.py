@@ -43,7 +43,9 @@ class TestSettings:
             "GOOGLE_SHEET_ID": "test_sheet_id",
             "GOOGLE_CREDENTIALS_FILE": "test_creds.json",
             "POLL_INTERVAL_SECONDS": "60",
-            "WEBHOOK_SECRET": "a_very_long_secret_that_is_at_least_32_chars_long"
+            "WEBHOOK_SECRET": "a_very_long_secret_that_is_at_least_32_chars_long",
+            "MCP_API_KEY": "dummy-key",
+            "GRAPHICS_STORAGE_CHANNEL_ID": "12345"
         }):
             # Act
             settings = Settings()
@@ -103,7 +105,9 @@ class TestSettings:
             "GOOGLE_SHEET_ID": "test_sheet",
             "WEBHOOK_SECRET": "a_very_long_secret_that_is_at_least_32_chars_long",
             "WANDERER_ROLE_ID": "100",
-            "PATHFINDER_ROLE_ID": "200"
+            "PATHFINDER_ROLE_ID": "200",
+            "MCP_API_KEY": "dummy-key",
+            "GRAPHICS_STORAGE_CHANNEL_ID": "12345"
         }):
             settings = Settings()
 
@@ -221,13 +225,13 @@ class TestSettings:
             # Future enhancement: Could add specific check for officer roles if needed.
 
     def test_class_emojis_defined(self):
-        """Test CLASS_EMOJIS dictionary is properly defined."""
-        # Need minimal env
         with patch.dict(os.environ, {
             "DISCORD_BOT_TOKEN": "test", "GUILD_ID": "1", "RECRUITMENT_CHANNEL_ID": "1", 
             "FORUM_CHANNEL_ID": "1", "GOOGLE_SHEET_ID": "1", 
             "WEBHOOK_SECRET": "a_very_long_secret_that_is_at_least_32_chars_long",
-            "WANDERER_ROLE_ID": "1"
+            "WANDERER_ROLE_ID": "1",
+            "MCP_API_KEY": "dummy-key",
+            "GRAPHICS_STORAGE_CHANNEL_ID": "12345"
         }):
             settings = Settings()
             # Act
@@ -243,7 +247,9 @@ class TestSettings:
             "DISCORD_BOT_TOKEN": "test", "GUILD_ID": "1", "RECRUITMENT_CHANNEL_ID": "1", 
             "FORUM_CHANNEL_ID": "1", "GOOGLE_SHEET_ID": "1", 
             "WEBHOOK_SECRET": "a_very_long_secret_that_is_at_least_32_chars_long",
-            "WANDERER_ROLE_ID": "1"
+            "WANDERER_ROLE_ID": "1",
+            "MCP_API_KEY": "dummy-key",
+            "GRAPHICS_STORAGE_CHANNEL_ID": "12345"
         }):
             settings = Settings()
             # Assert
@@ -257,7 +263,9 @@ class TestSettings:
             "DISCORD_BOT_TOKEN": "test", "GUILD_ID": "1", "RECRUITMENT_CHANNEL_ID": "1", 
             "FORUM_CHANNEL_ID": "1", "GOOGLE_SHEET_ID": "1", 
             "WEBHOOK_SECRET": "a_very_long_secret_that_is_at_least_32_chars_long",
-            "WANDERER_ROLE_ID": "1"
+            "WANDERER_ROLE_ID": "1",
+            "MCP_API_KEY": "dummy-key",
+            "GRAPHICS_STORAGE_CHANNEL_ID": "12345"
         }, clear=True):
             # Act
             settings = Settings()
@@ -272,7 +280,9 @@ class TestSettings:
             "DISCORD_BOT_TOKEN": "test", "GUILD_ID": "1", "RECRUITMENT_CHANNEL_ID": "1", 
             "FORUM_CHANNEL_ID": "1", "GOOGLE_SHEET_ID": "1", 
             "WEBHOOK_SECRET": "a_very_long_secret_that_is_at_least_32_chars_long",
-            "WANDERER_ROLE_ID": "1"
+            "WANDERER_ROLE_ID": "1",
+            "MCP_API_KEY": "dummy-key",
+            "GRAPHICS_STORAGE_CHANNEL_ID": "12345"
         }, clear=True):
             # Act
             settings = Settings()
@@ -289,7 +299,9 @@ class TestSettings:
             "WANDERER_ROLE_ID": "111222333",
             "WEBHOOK_SECRET": "a_very_long_secret_that_is_at_least_32_chars_long",
              # Min requirements
-            "DISCORD_BOT_TOKEN": "test", "FORUM_CHANNEL_ID": "1", "GOOGLE_SHEET_ID": "1"
+            "DISCORD_BOT_TOKEN": "test", "FORUM_CHANNEL_ID": "1", "GOOGLE_SHEET_ID": "1",
+            "MCP_API_KEY": "dummy-key",
+            "GRAPHICS_STORAGE_CHANNEL_ID": "12345"
         }):
             settings = Settings()
 
@@ -315,7 +327,9 @@ class TestSettings:
             "RECRUITMENT_CHANNEL_ID": "222",
             "FORUM_CHANNEL_ID": "333",
             "GOOGLE_SHEET_ID": "test_sheet",
-            "WEBHOOK_SECRET": "short_secret_only_12"  # Only 21 chars
+            "WEBHOOK_SECRET": "short_secret_only_12",  # Only 21 chars
+            "MCP_API_KEY": "dummy-key",
+            "GRAPHICS_STORAGE_CHANNEL_ID": "12345"
         }):
             # Settings should raise ValueError on init due to validation
             with pytest.raises(ValueError, match="WEBHOOK_SECRET must be at least 32 characters"):
@@ -328,7 +342,9 @@ class TestSettings:
             "RECRUITMENT_CHANNEL_ID": "222",
             "FORUM_CHANNEL_ID": "333",
             "GOOGLE_SHEET_ID": "test_sheet",
-            "WEBHOOK_SECRET": "a" * 32  # Exactly 32 chars
+            "WEBHOOK_SECRET": "a" * 32,  # Exactly 32 chars
+            "MCP_API_KEY": "dummy-key",
+            "GRAPHICS_STORAGE_CHANNEL_ID": "12345"
         }):
             settings = Settings()
             assert len(settings.WEBHOOK_SECRET) == 32
@@ -340,7 +356,9 @@ class TestSettings:
             "RECRUITMENT_CHANNEL_ID": "222",
             "FORUM_CHANNEL_ID": "333",
             "GOOGLE_SHEET_ID": "test_sheet",
-            "WEBHOOK_SECRET": "a_very_long_secret_that_is_definitely_more_than_32_characters_long"
+            "WEBHOOK_SECRET": "a_very_long_secret_that_is_definitely_more_than_32_characters_long",
+            "MCP_API_KEY": "dummy-key",
+            "GRAPHICS_STORAGE_CHANNEL_ID": "12345"
         }):
             settings = Settings()
             assert len(settings.WEBHOOK_SECRET) > 32

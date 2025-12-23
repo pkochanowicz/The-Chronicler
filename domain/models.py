@@ -18,7 +18,7 @@
 Domain Models
 Data classes and types for character submissions.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Dict
 from datetime import datetime
 

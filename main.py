@@ -22,8 +22,6 @@ import asyncio
 import logging
 from config.settings import settings
 from services.discord_client import bot
-from services.sheets_service import google_sheets_service
-from mcp.server import run_mcp_server
 
 # Configure logging
 logging.basicConfig(
@@ -37,7 +35,6 @@ async def setup_hook():
     """Load extensions on startup."""
     extensions = [
         "commands.character_commands",
-        "commands.officer_commands",
         "commands.bank_commands",
         "commands.talent_commands",
         "handlers.reaction_handler"
@@ -55,31 +52,6 @@ def main():
     try:
         # Set setup_hook
         bot.setup_hook = setup_hook
-
-        # Use global sheets_service
-        # sheets_service = CharacterRegistryService() # Removed
-
-        async def run_mcp():
-            try:
-                await run_mcp_server(bot, google_sheets_service) # Pass global service
-            except Exception as e:
-                logger.error(f"Failed to start MCP server: {e}")
-
-        async def run_webhook():
-            try:
-                await start_webhook_server(bot)
-            except Exception as e:
-                logger.error(f"Failed to start webhook server: {e}")
-
-        # Inject webhook and mcp tasks into setup_hook
-        original_setup_hook = bot.setup_hook
-        async def combined_setup_hook():
-            if original_setup_hook:
-                await original_setup_hook()
-            bot.loop.create_task(run_webhook())
-            bot.loop.create_task(run_mcp())
-        
-        bot.setup_hook = combined_setup_hook
 
         # Run the bot
         logger.info("Starting Azeroth Bound Bot...")

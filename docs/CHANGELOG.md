@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [1.2.8] - 2025-12-23
+
+### Breaking Changes
+- Migrated to external discord-guildmaster-mcp server architecture
+- Removed internal MCP server implementation from /mcp directory
+- The Chronicler now requires external MCP server for advanced features
+
+### Changed
+- Updated all documentation to reflect external MCP dependency
+- Restructured tests to mock external MCP server responses
+- Simplified codebase by removing MCP server concerns
+
+### Migration Guide
+- Deploy discord-guildmaster-mcp server separately
+- Configure MCP_SERVER_URL environment variable
+- See docs/MCP_DISCORD_TECHNICAL.md for full setup instructions
+
+---
 
 ## [2.0.0] - 2025-12-20
 

@@ -24,64 +24,6 @@ class TestPermissions:
     Tests for command permissions (Role-based access).
     """
 
-    def test_bury_requires_officer(self):
-        """
-        Verify /bury command implements officer role verification.
-
-        Per TECHNICAL.md, /bury requires Pathfinder OR Trailwarden role.
-        Implementation is in commands/officer_commands.py line 37-46.
-        """
-        # Import the actual command implementation
-        from commands.officer_commands import OfficerCommands
-        import inspect
-
-        # Verify OfficerCommands cog exists
-        assert OfficerCommands is not None, "OfficerCommands cog must exist"
-
-        # Verify bury method exists
-        assert hasattr(OfficerCommands, 'bury'), "OfficerCommands must have bury method"
-
-        # Get the bury method
-        bury_command = getattr(OfficerCommands, 'bury')
-        
-        # Handle wrapped Command object
-        if hasattr(bury_command, 'callback'):
-            bury_method = bury_command.callback
-        else:
-            bury_method = bury_command
-
-        # Verify it's a coroutine (async command)
-        assert inspect.iscoroutinefunction(bury_method), \
-            "/bury must be an async command"
-
-        # Read source code to verify permission check exists
-        source = inspect.getsource(bury_method)
-
-        # Verify critical security checks are present in source
-        assert 'OFFICER_ROLE_IDS' in source, \
-            "/bury must check OFFICER_ROLE_IDS from settings"
-
-        assert 'user_roles' in source or 'interaction.user.roles' in source, \
-            "/bury must inspect user roles"
-        assert 'not authorized' in source.lower() or 'permission' in source.lower(), \
-            "/bury must have authorization failure message"
-
-        # Verify BurialFlow is only instantiated after permission check
-        lines = source.split('\n')
-        permission_check_line = None
-        burial_flow_line = None
-
-        for i, line in enumerate(lines):
-            if 'OFFICER_ROLE_IDS' in line:
-                permission_check_line = i
-            if 'BurialFlow' in line and 'import' not in line:
-                burial_flow_line = i
-
-        assert permission_check_line is not None, "Permission check must exist"
-        assert burial_flow_line is not None, "BurialFlow instantiation must exist"
-        assert permission_check_line < burial_flow_line, \
-            "Permission check must occur BEFORE BurialFlow instantiation (security critical)"
-
     def test_register_requires_member(self):
         """
         Verify /register_character implements guild member role verification.
@@ -141,3 +83,4 @@ class TestPermissions:
         assert registration_flow_line is not None, "RegistrationFlow instantiation must exist"
         assert permission_check_line < registration_flow_line, \
             "Permission check must occur BEFORE RegistrationFlow instantiation (security critical)"
+

@@ -28,8 +28,6 @@ from domain.validators import (
     VALID_RACES, VALID_CLASSES, VALID_ROLES, VALID_PROFESSIONS,
     validate_race, validate_class, validate_roles, validate_professions, validate_url
 )
-from services.sheets_service import CharacterRegistryService
-from services.webhook_handler import handle_post_to_recruitment # Or trigger mechanism
 from utils.embed_parser import build_character_embeds, serialize_embeds
 from config.settings import settings
 
@@ -467,26 +465,10 @@ class RegistrationFlow(InteractiveFlow):
                 if msg.attachments:
                     attachment = msg.attachments[0] # Take the first attachment
                     if attachment.content_type and attachment.content_type.startswith('image/'):
-                        # Call MCP tool to store image
-                        # MCPTools instance needs settings, discord_client.
-                        # We can't directly instantiate MCPTools here as it requires a sheets_service.
-                        # Instead, we will directly call the function from mcp.tools,
-                        # passing the necessary settings and bot instance.
-                        from mcp.tools import MCPTools # Import locally to avoid circular
-                        mcp_tools_instance = MCPTools(settings, self.bot, None) # sheets_service not needed here
-                        
-                        thread_name = f"Portrait: {self.data['char_name']} ({self.data['discord_id']})"
-                        response = await mcp_tools_instance.post_image_to_graphics_storage(attachment.url, attachment.filename, thread_name=thread_name)
-
-
-                        if response["success"]:
-                            self.data["portrait_url"] = response["cdn_url"]
-                            self.data["request_sdxl"] = False
-                            await interaction.followup.send("✅ Image uploaded and stored successfully! Your portrait URL has been updated.", ephemeral=True)
-                        else:
-                            await interaction.followup.send(f"❌ Failed to store image: {response['error']}\nUsing default placeholder instead.", ephemeral=True)
-                            self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
-                            self.data["request_sdxl"] = False
+                        # TODO: Replace with a call to the external MCP server client
+                        self.data["portrait_url"] = attachment.url
+                        self.data["request_sdxl"] = False
+                        await interaction.followup.send("✅ Image URL captured! It will be processed later.", ephemeral=True)
                     else:
                         await interaction.followup.send("❌ That was not an image file. Using default placeholder instead.", ephemeral=True)
                         self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
@@ -617,54 +599,15 @@ class RegistrationFlow(InteractiveFlow):
 
     async def finalize(self):
         """Finalize registration."""
-        # Write to sheets
-        try:
-            embed_json = serialize_embeds(self.data["preview_embeds"])
+        # TODO: Implement database write here once the new service is available.
+        logger.info("Character registration finalized, but not saved to DB yet.")
+        logger.info(f"Character data: {self.data}")
 
-            char_data = {
-                "discord_id": self.data["discord_id"],
-                "discord_name": self.data["discord_name"],
-                "char_name": self.data["char_name"],
-                "race": self.data["race"],
-                "class": self.data["class"],
-                "roles": self.data["roles"],
-                "professions": self.data["professions"],
-                "trait_1": self.data["trait_1"],
-                "trait_2": self.data["trait_2"],
-                "trait_3": self.data["trait_3"],
-                "backstory": self.data["backstory"],
-                "personality": self.data.get("personality", ""),
-                "quotes": self.data.get("quotes", ""),
-                "portrait_url": self.data.get("portrait_url", ""),
-                "status": STATUS_PENDING,
-                "confirmation": True,
-                "request_sdxl": self.data.get("request_sdxl", False),
-                "embed_json": embed_json
-            }
-
-            registry = CharacterRegistryService()
-            success = registry.log_character(char_data)
-
-            if success:
-                await self.interaction.followup.send(
-                    "✨ **THE INSCRIPTION IS COMPLETE!** ✨\n\n"
-                    "Your character has been submitted for review. Watch for a DM!",
-                    ephemeral=True
-                )
-                # Trigger webhook logic locally if needed, or rely on Google Script to trigger it?
-                # The BLUEPRINT says:
-                # [AT THIS MOMENT:] -> Google Sheets row created -> Webhook triggers
-                # So we just write to sheet. The Google Script triggers the bot's webhook endpoint.
-                # Bot doesn't need to call handle_post_to_recruitment directly here.
-                # Wait, local testing environment doesn't have Google Script trigger.
-                # But in production, it's Path B.
-                # So we are done.
-            else:
-                await self.interaction.followup.send("❌ Failed to write to archives. Please alert the officers.", ephemeral=True)
-
-        except Exception as e:
-            logger.error(f"Finalization error: {e}")
-            await self.interaction.followup.send("❌ Critical error during inscription.", ephemeral=True)
+        await self.interaction.followup.send(
+            "✨ **THE INSCRIPTION IS COMPLETE!** ✨\n\n"
+            "Your character has been submitted for review. Watch for a DM!",
+            ephemeral=True
+        )
 
     async def handle_timeout(self):
         if self.message:

@@ -49,9 +49,10 @@ Built on the **Path B Architecture**:
 
 The Chronicler is built with modern, production-grade standards.
 
-- **Stack:** Python 3.11, `discord.py`, `aiohttp`, `gspread`
-- **Architecture:** Webhook-driven (Google Apps Script → Discord)
-- **Deployment:** Fly.io / Render.com ready
+- **Stack:** Python 3.11, `discord.py`, `aiohttp`, FastAPI, PostgreSQL
+- **Architecture:** Hybrid (Discord Bot + External MCP Server)
+- **External Dependency:** [discord-guildmaster-mcp](https://github.com/pkochanowicz/discord-guildmaster-mcp)
+- **Deployment:** Fly.io ready
 - **Quality:** 100% Test Coverage, Type-hinted, Linted
 
 ### Quick Start
