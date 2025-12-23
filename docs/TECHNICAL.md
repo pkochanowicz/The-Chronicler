@@ -1,55 +1,72 @@
 # Azeroth Bound Bot - Technical Documentation
 
-**Version:** 2.0.0 (Schema Reformation & Ascension)
+**Version:** 1.2.0 (Schema Reformation & Ascension)
 **Architecture:** Path B (Webhook-Driven)
-**Last Updated:** December 20, 2025
+**Last Updated:** December 21, 2025
 
 ---
 
 ## 1. Architecture Overview
 
-The Azeroth Bound Bot ("The Chronicler") uses a **hybrid architecture**:
+The Azeroth Bound Bot ("The Chronicler") uses a **robust, event-driven architecture**:
 - **Discord Bot (Python):** Handles user interactions, interactive flows, and immediate feedback.
-- **Google Sheets:** Acts as the primary database (Source of Truth).
-- **Webhooks (Google Apps Script):** Pushes updates from Sheets to Discord instantly (Zero Polling).
-- **MCP Server:** Provides an API layer for LLM agents to interact with the bot.
+- **Supabase PostgreSQL:** Acts as the primary database (Source of Truth).
+- **FastAPI Gateway:** A production-grade web service handling webhooks, health checks, and acting as the bridge between database events and Discord.
+- **MCP Platform:** A separate development/testing environment for LLM-driven features and complex operations.
 
 ---
 
-## 2. Data Schemas
+## 2. Data Schemas (PostgreSQL)
 
-### Character_Submissions Sheet (27 Columns)
-Stores character data.
-*Columns:* `timestamp`, `discord_id`, `discord_name`, `char_name`, `race`, `class`, `roles`, `professions`, `backstory`, `personality`, `quotes`, `portrait_url`, `trait_1`, `trait_2`, `trait_3`, `status`, `confirmation`, `request_sdxl`, `recruitment_msg_id`, `forum_post_url`, `reviewed_by`, `embed_json`, `death_cause`, `death_story`, `created_at`, `updated_at`, `notes`, `talents_json` (JSON string of talent build).
+### `characters` Table
+The definitive record for all guild members.
+*Key Columns:*
+- `id` (UUID): Primary Key.
+- `discord_id` (BigInt): Link to Discord user.
+- `name` (Text): Character name (Unique).
+- `status` (Enum): `PENDING`, `REGISTERED`, `DECEASED`, `BURIED`.
+- `attributes` (JSONB): Flexible storage for `race`, `class`, `roles`, `professions`.
+- `biography` (JSONB): Stores `backstory`, `personality`, `quotes`, `traits`.
+- `talents` (JSONB): Full talent build data.
+- `meta` (JSONB): `portrait_url`, `forum_post_id`, `recruitment_msg_id`.
 
-### Guild_Bank Sheet (12 Columns)
-Stores bank transactions and inventory.
-*Columns:* `item_id` (UUID), `item_name`, `item_category`, `quantity`, `deposited_by` (Discord ID), `deposited_by_name`, `deposited_at` (ISO timestamp), `withdrawn_by`, `withdrawn_by_name`, `withdrawn_at`, `notes`, `status` (AVAILABLE/WITHDRAWN).
+### `guild_bank` Table
+Tracks every item and transaction.
+*Key Columns:*
+- `id` (UUID): Transaction ID.
+- `item_name` (Text): Name of the item.
+- `quantity` (Integer): Amount.
+- `depositor_id` (BigInt): Discord ID of depositor.
+- `status` (Enum): `AVAILABLE`, `WITHDRAWN`.
+- `transaction_history` (JSONB): Audit log of ownership.
 
-### Talent_Library Sheet (8 Columns)
-Stores static talent data for validation.
-*Columns:* `Class`, `Tree`, `TalentName`, `MaxRank`, `Level`, `Tier`, `Requires` (JSON list), `RequiredBy` (JSON list).
+### `talent_library` Table
+Static data for validation, populated via scraping.
+*Key Columns:*
+- `id` (Text): Unique slug (e.g., `warrior_arms_mortalstrike`).
+- `tree` (Text): Talent tree name.
+- `max_rank` (Int): Validation rule.
+- `prerequisites` (JSONB): Dependency logic.
 
 ---
 
 ## 3. Core Services
 
-### GoogleSheetsService (`services/sheets_service.py`)
-Manages all Google Sheets interactions.
-- **Initialization:** Auto-creates missing sheets/headers on startup.
-- **Methods:** `log_character`, `log_talent`, `update_character_status`, `get_character_by_name`.
-- **Logic:** Handles JSON serialization for complex fields (`talents`, `Requires`).
+### CharacterService (`services/character_service.py`)
+The primary interface for character logic.
+- **Backend:** Uses `CharacterRepository` (SQLAlchemy) to interact with Supabase.
+- **Methods:** `create_character`, `get_by_discord_id`, `update_status`, `bury`.
+- **Validation:** Enforces Pydantic models before DB writes.
 
 ### GuildBankService (`services/bank_service.py`)
-Manages banking logic.
-- **Methods:** `deposit_item`, `withdraw_item`, `get_member_deposits`.
-- **Logic:** Generates UUIDs for items, tracks ownership history.
+Manages banking transactions.
+- **Backend:** Uses `BankRepository` (SQLAlchemy).
+- **Logic:** Ensures atomic transactions for deposits and withdrawals.
 
-### MCP Server (`mcp/`)
-Exposes bot functionality to LLMs.
-- **Tools:** `get_character_sheet`, `post_image_to_graphics_storage`, `send_discord_message`.
-- **Security:** API Key authentication.
-- **Graphics:** Handles image uploads to `#graphics-storage` and returns CDN URLs.
+### Chronicler Gateway (`main.py`)
+The FastAPI application entry point.
+- **Routes:** `/webhooks/discord`, `/health`.
+- **Lifespan:** Manages database connection pools and bot startup/shutdown.
 
 ---
 
@@ -57,21 +74,28 @@ Exposes bot functionality to LLMs.
 
 ### /register_character
 12-step flow using Discord Modals and Buttons.
-- **Image Upload:** Users upload images directly; bot hosts them on `#graphics-storage`.
-- **Validation:** Checks race/class combos via `domain/validators.py`.
+- **State Management:** Temporary state stored in memory (Redis planned).
+- **Finalization:** Calls `CharacterService.create_character` to persist to PostgreSQL.
+- **Image Upload:** Uploads to Discord CDN, URL stored in `characters` table.
+
+### /bury
+Ceremonial flow for handling character death.
+- **Logic:** Updates `status` to `DECEASED`.
+- **Trigger:** Database update fires event -> Gateway posts to `#cemetery`.
 
 ### /talent audit
-Validates a JSON talent build against the `Talent_Library` rules.
-- Checks: Max rank, Level requirement, Tier prerequisites, Talent dependencies.
+Validates a JSON talent build against the `talent_library` table.
+- **Logic:** Recursive check of prerequisites and point limits.
 
 ---
 
 ## 5. Deployment
 
-Deployed on **Fly.io**.
+Deployed on **Fly.io** with high availability.
 - **Config:** `fly.toml`
-- **Secrets:** Managed via `flyctl secrets` (Discord Token, Sheet ID, Webhook Secret, MCP Key).
-- **Process:** `python main.py` runs the Bot, Webhook Server, and MCP Server concurrently.
+- **Secrets:** `DISCORD_TOKEN`, `DATABASE_URL` (Supabase), `WEBHOOK_SECRET`.
+- **Process:** Single container running FastAPI (`uvicorn`) + Discord Bot (`asyncio.create_task`).
+- **Restart Policy:** `always` (ensures bot survives transient failures).
 
 ---
 

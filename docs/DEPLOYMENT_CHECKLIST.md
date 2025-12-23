@@ -30,7 +30,7 @@ This checklist should be used after every deployment to ensure the bot is fully 
 
 - [ ] **Webhook URL:** The webhook URL (`https://<your-app-name>.fly.dev/webhook`) is accessible.
 - [ ] **Secret Validation:** A `POST` request with an invalid secret is correctly rejected with a `400` or `401` error.
-- [ ] **Google Apps Script:** The Apps Script can successfully `POST` to the webhook URL.
+
 - [ ] **Sheet Trigger:** A change in the Google Sheet (e.g., setting `confirmation` to `TRUE`) correctly fires the webhook.
 
 ### 3. Interactive Flows (E2E Test) ✅

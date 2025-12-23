@@ -1,6 +1,5 @@
-#!/bin/bash
 # Deploy secrets from .env to Fly.io
-# Batched version for speed and reliability
+# Improved version with batching
 
 set -e  # Exit on error
 
@@ -15,38 +14,28 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Check if flyctl is available
+# Check if flyctl is installed
 if ! command -v flyctl &> /dev/null; then
     echo "❌ Error: flyctl not found!"
+    echo "   Install from: https://fly.io/docs/hands-on/install-flyctl/"
     exit 1
 fi
 
-# Check authentication
-if ! flyctl auth whoami &> /dev/null 2>&1; then
-    echo "❌ Error: Not authenticated. Run: flyctl auth login"
+# Check if authenticated
+if ! flyctl auth whoami &> /dev/null; then
+    echo "❌ Error: Not authenticated with Fly.io"
+    echo "   Run: flyctl auth login"
     exit 1
 fi
 
-echo "✓ Prerequisites verified"
+echo "✓ .env file found"
+echo "✓ flyctl installed and authenticated"
 echo ""
 
-# Handle GOOGLE_CREDENTIALS_B64 encoding
-GOOGLE_CREDS_B64=""
-if [ -f credentials.json ]; then
-    echo "📋 Found credentials.json - encoding to base64..."
-    GOOGLE_CREDS_B64=$(cat credentials.json | base64 | tr -d '\n')
-    echo "✓ Encoded: ${#GOOGLE_CREDS_B64} characters"
-    echo ""
-else
-    echo "⚠️  credentials.json not found - will use value from .env if present"
-    echo ""
-fi
+# Collect all secrets (batch approach for speed)
+declare -a SECRETS=()
 
-# Collect secrets into an array (for batching)
-declare -a SECRETS_ARRAY=()
-
-echo "🔄 Reading secrets from .env..."
-
+echo "🔄 Reading .env file..."
 while IFS='=' read -r key value; do
     # Skip empty lines and comments
     [[ -z "$key" || "$key" =~ ^#.* ]] && continue
@@ -58,45 +47,34 @@ while IFS='=' read -r key value; do
     # Remove surrounding quotes
     value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
 
-    # Skip placeholder/empty values
-    [[ -z "$value" ]] && continue
+    # Skip placeholder values
     [[ "$value" == "your_"* ]] && continue
     [[ "$value" == "generate_"* ]] && continue
+    [[ -z "$value" ]] && continue
+
+    # Skip 0 values for role IDs (placeholders)
     [[ "$value" == "0" ]] && [[ "$key" =~ _ROLE_ID$ ]] && continue
 
-    # Use encoded Google credentials if available
-    if [ "$key" == "GOOGLE_CREDENTIALS_B64" ] && [ -n "$GOOGLE_CREDS_B64" ]; then
-        value="$GOOGLE_CREDS_B64"
-    fi
-
-    # Add to array
-    SECRETS_ARRAY+=("$key=$value")
+    # Add to secrets array
+    SECRETS+=("$key=$value")
     echo "  ✓ Queued: $key"
 done < .env
 
 echo ""
-echo "📦 Collected ${#SECRETS_ARRAY[@]} secrets"
+echo "🚀 Deploying ${#SECRETS[@]} secrets to Fly.io (batched)..."
 echo ""
 
-# Deploy all secrets in ONE batched command
-if [ ${#SECRETS_ARRAY[@]} -gt 0 ]; then
-    echo "🚀 Deploying all secrets to Fly.io (batched for speed)..."
+# Deploy all secrets at once (much faster than one-by-one)
+if [ ${#SECRETS[@]} -gt 0 ]; then
+    flyctl secrets set "${SECRETS[@]}" --app "$APP_NAME"
     echo ""
-
-    # Set all secrets at once - much faster and more reliable
-    flyctl secrets set "${SECRETS_ARRAY[@]}" --app "$APP_NAME" --stage
-
-    echo ""
-    echo "✅ All secrets staged successfully!"
-    echo ""
-    echo "📝 Note: Secrets are STAGED and will be applied on first deployment"
-    echo "   Run: flyctl deploy"
+    echo "✅ All secrets deployed successfully!"
 else
-    echo "⚠️  No valid secrets found to deploy"
-    exit 1
+    echo "⚠️  No secrets found to deploy"
 fi
 
 echo ""
-echo "🔍 Verify secrets with:"
-echo "   flyctl secrets list --app $APP_NAME"
+echo "📝 Next steps:"
+echo "   1. Verify: flyctl secrets list --app $APP_NAME"
+echo "   2. Deploy: flyctl deploy"
 echo ""

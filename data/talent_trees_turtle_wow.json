@@ -1,0 +1,164 @@
+[
+    {
+        "id": "warrior_arms",
+        "class": "WARRIOR",
+        "tree_name": "ARMS",
+        "background_image_url": "https://i.imgur.com/dG8sqvo.jpeg"
+    },
+    {
+        "id": "warrior_fury",
+        "class": "WARRIOR",
+        "tree_name": "FURY",
+        "background_image_url": "https://i.imgur.com/zksnzOE.jpeg"
+    },
+    {
+        "id": "warrior_protection",
+        "class": "WARRIOR",
+        "tree_name": "PROTECTION",
+        "background_image_url": "https://i.imgur.com/nBFGuoD.jpeg"
+    },
+    {
+        "id": "paladin_holy",
+        "class": "PALADIN",
+        "tree_name": "HOLY",
+        "background_image_url": "https://i.imgur.com/JP8Gl2N.jpeg"
+    },
+    {
+        "id": "paladin_protection",
+        "class": "PALADIN",
+        "tree_name": "PROTECTION",
+        "background_image_url": "https://i.imgur.com/tXyypuW.jpeg"
+    },
+    {
+        "id": "paladin_retribution",
+        "class": "PALADIN",
+        "tree_name": "RETRIBUTION",
+        "background_image_url": "https://i.imgur.com/13blQWM.jpeg"
+    },
+    {
+        "id": "hunter_beast mastery",
+        "class": "HUNTER",
+        "tree_name": "BEAST MASTERY",
+        "background_image_url": "https://i.imgur.com/9IDZKjk.jpeg"
+    },
+    {
+        "id": "hunter_marksmanship",
+        "class": "HUNTER",
+        "tree_name": "MARKSMANSHIP",
+        "background_image_url": "https://i.imgur.com/imOT6iL.jpeg"
+    },
+    {
+        "id": "hunter_survival",
+        "class": "HUNTER",
+        "tree_name": "SURVIVAL",
+        "background_image_url": "https://i.imgur.com/cehCppw.jpeg"
+    },
+    {
+        "id": "rogue_assassination",
+        "class": "ROGUE",
+        "tree_name": "ASSASSINATION",
+        "background_image_url": "https://i.imgur.com/wdMMU0H.jpeg"
+    },
+    {
+        "id": "rogue_combat",
+        "class": "ROGUE",
+        "tree_name": "COMBAT",
+        "background_image_url": "https://i.imgur.com/YwK1PZa.jpeg"
+    },
+    {
+        "id": "rogue_subtlety",
+        "class": "ROGUE",
+        "tree_name": "SUBTLETY",
+        "background_image_url": "https://i.imgur.com/MCiw1vw.jpeg"
+    },
+    {
+        "id": "priest_discipline",
+        "class": "PRIEST",
+        "tree_name": "DISCIPLINE",
+        "background_image_url": "https://i.imgur.com/jb539sB.jpeg"
+    },
+    {
+        "id": "priest_holy",
+        "class": "PRIEST",
+        "tree_name": "HOLY",
+        "background_image_url": "https://i.imgur.com/Ff4JPx7.jpeg"
+    },
+    {
+        "id": "priest_shadow",
+        "class": "PRIEST",
+        "tree_name": "SHADOW",
+        "background_image_url": "https://i.imgur.com/WdvVXDq.jpeg"
+    },
+    {
+        "id": "shaman_elemental",
+        "class": "SHAMAN",
+        "tree_name": "ELEMENTAL",
+        "background_image_url": "https://i.imgur.com/tZhxnJZ.jpeg"
+    },
+    {
+        "id": "shaman_enhancement",
+        "class": "SHAMAN",
+        "tree_name": "ENHANCEMENT",
+        "background_image_url": "https://i.imgur.com/l5mMLXR.jpeg"
+    },
+    {
+        "id": "shaman_restoration",
+        "class": "SHAMAN",
+        "tree_name": "RESTORATION",
+        "background_image_url": "https://i.imgur.com/92yXUuM.jpeg"
+    },
+    {
+        "id": "mage_arcane",
+        "class": "MAGE",
+        "tree_name": "ARCANE",
+        "background_image_url": "https://i.imgur.com/jEEi4Sm.jpeg"
+    },
+    {
+        "id": "mage_fire",
+        "class": "MAGE",
+        "tree_name": "FIRE",
+        "background_image_url": "https://i.imgur.com/stbVfwD.jpeg"
+    },
+    {
+        "id": "mage_frost",
+        "class": "MAGE",
+        "tree_name": "FROST",
+        "background_image_url": null
+    },
+    {
+        "id": "warlock_affliction",
+        "class": "WARLOCK",
+        "tree_name": "AFFLICTION",
+        "background_image_url": "https://i.imgur.com/95rcgS7.jpeg"
+    },
+    {
+        "id": "warlock_demonology",
+        "class": "WARLOCK",
+        "tree_name": "DEMONOLOGY",
+        "background_image_url": "https://i.imgur.com/ntFjD9G.jpeg"
+    },
+    {
+        "id": "warlock_destruction",
+        "class": "WARLOCK",
+        "tree_name": "DESTRUCTION",
+        "background_image_url": "https://i.imgur.com/S8X1OtI.jpeg"
+    },
+    {
+        "id": "druid_balance",
+        "class": "DRUID",
+        "tree_name": "BALANCE",
+        "background_image_url": "https://i.imgur.com/Ob3ScSl.jpeg"
+    },
+    {
+        "id": "druid_feral combat",
+        "class": "DRUID",
+        "tree_name": "FERAL COMBAT",
+        "background_image_url": "https://i.imgur.com/TQZ5NPN.jpeg"
+    },
+    {
+        "id": "druid_restoration",
+        "class": "DRUID",
+        "tree_name": "RESTORATION",
+        "background_image_url": "https://i.imgur.com/ElJPrb1.jpeg"
+    }
+]

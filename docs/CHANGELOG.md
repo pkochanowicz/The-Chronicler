@@ -1,86 +1,58 @@
-# Azeroth Bound Bot - Changelog
+# Changelog
 
-All notable changes to the **Azeroth Bound** project (also known as *The Chronicle*) will be documented in this file.
+All notable changes to **The Chronicler** project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2025-12-22 "The Singing Steel"
+
+### ⚔️ Major Feature: Guild Bank System
+- **Banking Ledger:** Implemented a fully transactional banking system (`GuildBankService`) backed by PostgreSQL.
+- **Commands:** Added `/bank deposit`, `/bank withdraw`, `/bank view`, and `/bank mydeposits`.
+- **Schema:** Introduced `guild_bank_items` and `guild_bank_transactions` tables via Alembic migration.
+
+### 🛡️ Major Feature: Interactive Discord Flows
+- **Registration Ritual:** Refactored the character registration wizard (`/register_character`) to be purely ephemeral and SQL-backed.
+- **Officer Control Center:** Implemented `OfficerControlView` attached to recruitment threads, enabling button-based **Approve**, **Reject**, and **Request Edit** actions.
+- **Automated Lifecycle:** Approval now automatically promotes characters to the Vault, creates their sheet thread, and archives the application.
+
+### 🏗️ Architecture & Technical Debt
+- **PostgreSQL Source of Truth:** Completed the migration from Google Sheets to Supabase/PostgreSQL for all core data (Characters, Bank, Graveyard).
+- **Schema Alignment:** rigorously aligned `schemas/db_schemas.py` and `models/pydantic_models.py` with the `docs/architecture_UI_UX.md` specifications.
+- **Alembic Migrations:** Established a robust migration pipeline with `release_command` configuration for Fly.io.
+- **Legacy Purge:** Completely removed `GoogleSheetsService` and related dependencies (`gspread`, `oauth2client`) from the core runtime path.
+
+### 📘 Documentation
+- **Architecture Features:** Published `docs/architecture_features_v2.md` detailing the flow logic.
+- **User Guide:** Updated `docs/USER_GUIDE.md` with banking and talent editor instructions.
+- **Restoration:** Restored and finalized `docs/architecture_UI_UX.md`.
+
 ---
 
-## [2.0.0] - 2025-12-20
+## [1.2.0] - 2025-12-21 "Reformation"
 
-### 🚀 Major Release: The Schema Reformation & Ascension
+### 🚀 Major Architectural Shift
+- **Migration to PostgreSQL (Supabase):** The entire data persistence layer has been migrated from Google Sheets to a relational PostgreSQL database hosted on Supabase.
+- **Single Source of Truth:** The database is now the definitive authority for all character, guild bank, and talent data. Discord serves strictly as a frontend interface.
+- **FastAPI Gateway:** Introduced a production-grade FastAPI application (`main.py`) to serve as the central gateway for webhooks and health checks, replacing the ad-hoc script execution.
+- **Database Schema Management (Alembic):** Integrated Alembic for robust, version-controlled database schema migrations.
 
-This release marks the transition to a fully webhook-driven architecture (Path B), a comprehensive 27-column character schema, and the introduction of major gameplay systems.
+### ✨ New Features
+- **Talent Validation Engine:** A new validation logic that audits talent builds against Classic+ rules.
+- **Fly.io "Always On" Policy:** Deployment configuration updated for high availability.
+
+### 🛠️ Technical Improvements
+- **Docker Optimization:** Implemented multi-stage builds with `.dockerignore`.
+- **Secret Management:** Standardized environment variables across local `.env` and Fly.io secrets.
+- **Testing:** Achieved E2E test passes for the core API layer.
+
+---
+
+## [1.0.0] - 2025-12-15 "Genesis"
 
 ### Added
-- **Guild Bank System:**
-  - New `GuildBankService` handling a one-member-to-many-items relationship.
-  - New Google Sheet tab `Guild_Bank` with 12-column schema.
-  - New commands: `/bank deposit`, `/bank withdraw`, `/bank view`, `/bank mydeposits`.
-- **Talent System & Validation:**
-  - New `Talent_Library` Google Sheet for dynamic talent data.
-  - Comprehensive `TALENT_DATA` structure for all 9 classes (Classic+).
-  - New command: `/talent audit` to validate builds against rules.
-  - `validate_talents` logic checking ranks, levels, and prerequisites.
-- **Portrait Forge:**
-  - AI prompt generation for characters without custom portraits.
-- **Graphics Storage Integration:**
-  - `post_image_to_graphics_storage` MCP tool to host images on Discord.
-  - Automated image uploading for `/register_character` flow.
-- **MCP Server Integration:**
-  - Dedicated internal MCP server for LLM-based interactions.
-  - Tools for sheet access, messaging, and channel management.
-- **Architecture:**
-  - `GoogleSheetsService` refactor to manage multiple sheet tabs dynamically.
-  - Auto-creation of missing sheets (`Guild_Bank`, `Talent_Library`) on startup.
-
-### Changed
-- **Character Schema:** Expanded to 27 columns (added `death_cause`, `death_story`, `talents_json`, etc.).
-- **Registration Flow:** Now supports direct image uploads via Discord attachments.
-- **Documentation:** Complete overhaul of README, TECHNICAL, and USER guides for v2.0.
-
----
-
-## [1.1.9] - 2025-12-20
-*Merged into 2.0.0*
-
----
-
-## [1.1.8] - 2025-12-20
-*Merged into 2.0.0*
-
----
-
-## [1.1.7] - 2025-12-20
-
-### Fixed
-- **Deprecation Warnings:** Replaced all instances of the deprecated `datetime.datetime.utcnow()` with the timezone-aware `datetime.datetime.now(datetime.UTC)`. This resolves all `DeprecationWarning`s during tests and ensures future compatibility.
-
-### Added
-- **Deployment Checklist:** Created `docs/DEPLOYMENT_CHECKLIST.md` to provide a comprehensive checklist for verifying deployments.
-- **Testing Results:** Updated `TESTING_RESULTS.md` with the full report from the "QUEST II: BATTLE HARDENING" deployment and verification.
-
-### Changed
-- **Deployment:** The application was successfully deployed to Fly.io, and the webhook is confirmed to be live and secure.
-
----
-
-## [1.1.6] - 2025-12-20
-
-### Deployment
-- Successfully deployed the application to fly.io.
-
-### Changed
-- **fly.toml**: Changed `primary_region` from `waw` to `arn` to resolve deployment errors due to the deprecation of the `waw` region.
-
-### Fixed
-- **Dockerfile.uv**: Modified the Dockerfile to copy `README.md` and `poetry.lock` before installing dependencies, fixing a `FileNotFoundError` during the build process.
-
-### Added
-- **fly.toml**: Modified the build configuration to use `Dockerfile.uv` for deployments, switching from a buildpack-based to a Dockerfile-based deployment strategy.
-- **TESTING_RESULTS.md**: Comprehensive report of the end-to-end testing suite execution (77 tests passed), verifying:
-  - Full 12-step `/register_character` interactive flow
-  - `/bury` ceremony and cemetery functionality
-  - Webhook security and trigger logic
-  - Error handling and recovery strategies
+- Initial release of The Chronicler.
+- Character registration flow (12-step interactive wizard).
+- Basic google sheets integration.
+- Burial rite ceremony.

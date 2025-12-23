@@ -21,11 +21,12 @@ Configures the Discord bot client.
 import logging
 import discord
 from discord.ext import commands
-from config.settings import settings
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
 def create_bot():
+    settings = get_settings() # Get settings instance
     # Configure intents
     intents = discord.Intents.default()
     intents.message_content = True

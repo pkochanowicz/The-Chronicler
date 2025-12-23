@@ -22,11 +22,12 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from flows.burial_flow import BurialFlow
-from config.settings import settings
+from config.settings import get_settings
 
 class OfficerCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.settings = get_settings()
 
     @app_commands.command(name="bury", description="[Officer] Perform the Rite of Remembrance for a fallen character.")
     async def bury(self, interaction: discord.Interaction):
@@ -36,7 +37,7 @@ class OfficerCommands(commands.Cog):
         """
         # Check permissions (Officer)
         user_roles = [r.id for r in interaction.user.roles]
-        allowed_roles = settings.OFFICER_ROLE_IDS
+        allowed_roles = self.settings.OFFICER_ROLE_IDS
         
         if not any(role_id in user_roles for role_id in allowed_roles):
              await interaction.response.send_message(
