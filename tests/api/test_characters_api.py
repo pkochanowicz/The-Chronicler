@@ -1,92 +1,94 @@
 import pytest
 from httpx import AsyncClient
 from main import app
-from models.pydantic_models import CharacterCreate, CharacterUpdate, ChallengeMode
-from schemas.db_schemas import Character # Assuming Character model for direct DB access in test setup
+from models.pydantic_models import CharacterCreate
+from schemas.db_schemas import Character, CharacterRaceEnum, CharacterClassEnum, CharacterRoleEnum
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.repositories import CharacterRepository
 from uuid import uuid4
-from fastapi.testclient import TestClient
 
-# Assuming a test_db_session fixture that provides an AsyncSession connected to a test database
-# and handles cleanup. This would typically be defined in conftest.py
+# Use pytest_asyncio.fixture for async fixtures
+import pytest_asyncio
 
-
-
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_character(async_session: AsyncSession):
     character_data = CharacterCreate(
-        discord_id=f"test_discord_api_{uuid4().hex}",
-        character_name="APIHero",
-        race="Human",
-        faction="Alliance",
-        class_name="Paladin",
-        level=60,
-        challenge_mode=ChallengeMode.Hardcore,
-        story="A righteous defender."
+        discord_user_id=int(uuid4().int % 100000000), 
+        discord_username="APIUser",
+        name=f"APIHero_{uuid4().hex[:6]}",
+        race=CharacterRaceEnum.Human,
+        class_name=CharacterClassEnum.Paladin,
+        roles=[CharacterRoleEnum.Tank],
+        professions=["Mining"],
+        backstory="A righteous defender.",
+        trait_1="A", trait_2="B", trait_3="C"
     )
     repo = CharacterRepository(async_session)
     char = await repo.create_character(character_data)
     return char
 
 @pytest.mark.asyncio
-async def test_create_character_api(client):
-    discord_id = f"new_api_user_{uuid4().hex}"
+async def test_create_character_api(async_client: AsyncClient):
+    discord_id = int(uuid4().int % 100000000)
     character_data = {
-        "discord_id": discord_id,
-        "character_name": "NewAPIChar",
-        "race": "NightElf",
-        "faction": "Alliance",
-        "class": "Druid", # Using "class" as per Pydantic model alias
-        "level": 1,
-        "challenge_mode": "None",
-        "story": "Freshly created."
+        "discord_user_id": discord_id,
+        "discord_username": "NewAPIUser",
+        "name": "NewAPIChar",
+        "race": "Night Elf",
+        "class": "Druid",
+        "roles": ["Healer"],
+        "professions": ["Herbalism"],
+        "backstory": "Freshly created.",
+        "trait_1": "Wise",
+        "trait_2": "Calm",
+        "trait_3": "Nature-bound"
     }
-    response = client.post("/characters/", json=character_data)
+    response = await async_client.post("/characters/", json=character_data)
     assert response.status_code == 201
     created_character = response.json()
-    assert created_character["character_name"] == "NewAPIChar"
-    assert created_character["discord_id"] == discord_id
+    assert created_character["name"] == "NewAPIChar"
+    assert created_character["discord_user_id"] == discord_id
 
 @pytest.mark.asyncio
-async def test_get_character_by_id_api(client, test_character: Character):
-    response = client.get(f"/characters/{test_character.id}")
+async def test_get_character_by_id_api(async_client: AsyncClient, test_character: Character):
+    response = await async_client.get(f"/characters/{test_character.id}")
     assert response.status_code == 200
     retrieved_character = response.json()
-    assert retrieved_character["id"] == str(test_character.id)
-    assert retrieved_character["character_name"] == test_character.character_name
+    assert retrieved_character["id"] == test_character.id
+    assert retrieved_character["name"] == test_character.name
 
 @pytest.mark.asyncio
-async def test_get_character_by_discord_id_api(client, test_character: Character):
-    response = client.get(f"/characters/by-discord/{test_character.discord_id}")
+async def test_get_character_by_discord_id_api(async_client: AsyncClient, test_character: Character):
+    response = await async_client.get(f"/characters/by-discord/{test_character.discord_user_id}")
     assert response.status_code == 200
     retrieved_character = response.json()
-    assert retrieved_character["discord_id"] == test_character.discord_id
+    assert retrieved_character["discord_user_id"] == test_character.discord_user_id
 
 @pytest.mark.asyncio
-async def test_update_character_api(client, test_character: Character):
-    update_data = {"character_name": "UpdatedAPIHero", "level": 61}
-    response = client.patch(f"/characters/{test_character.id}", json=update_data)
+async def test_update_character_api(async_client: AsyncClient, test_character: Character):
+    update_data = {"name": "UpdatedAPIHero", "backstory": "New story"}
+    response = await async_client.patch(f"/characters/{test_character.id}", json=update_data)
     assert response.status_code == 200
     updated_character = response.json()
-    assert updated_character["character_name"] == "UpdatedAPIHero"
-    assert updated_character["level"] == 61
+    assert updated_character["name"] == "UpdatedAPIHero"
+    assert updated_character["backstory"] == "New story"
 
 @pytest.mark.asyncio
-async def test_delete_character_api(client, test_character: Character):
-    response = client.delete(f"/characters/{test_character.id}")
+async def test_delete_character_api(async_client: AsyncClient, test_character: Character):
+    response = await async_client.delete(f"/characters/{test_character.id}")
     assert response.status_code == 204
     
     # Verify deletion
-    check_response = client.get(f"/characters/{test_character.id}")
+    check_response = await async_client.get(f"/characters/{test_character.id}")
     assert check_response.status_code == 404
 
 @pytest.mark.asyncio
-async def test_bury_character_api(client, test_character: Character):
+async def test_bury_character_api(async_client: AsyncClient, test_character: Character):
     cause_of_death = "Killed by a Murloc"
     eulogy = "Never forget the murlocs."
-    response = client.post(f"/characters/{test_character.id}/bury?cause_of_death={cause_of_death}&eulogy={eulogy}")
+    # query params
+    response = await async_client.post(f"/characters/{test_character.id}/bury", params={"cause_of_death": cause_of_death, "eulogy": eulogy})
     assert response.status_code == 201
     graveyard_entry = response.json()
-    assert graveyard_entry["character_id"] == str(test_character.id)
+    assert graveyard_entry["character_id"] == test_character.id
     assert graveyard_entry["cause_of_death"] == cause_of_death

@@ -1,76 +1,85 @@
-from typing import List, Dict, Optional
-from pydantic_settings import BaseSettings, SettingsConfigDict
+# config/settings.py
+import os
+import base64
+import logging
+from typing import Optional, List
+from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator, model_validator
+from dotenv import load_dotenv
+
+# Import from game_data instead of legacy models
+from domain.game_data import CLASS_DATA
+
+load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
-    DATABASE_URL: str
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
-    DISCORD_BOT_TOKEN: str = Field(..., min_length=1)
-    WEBHOOK_SECRET: str = Field(..., min_length=32)
+    # Application Mode
+    ENV: str = Field("development", pattern="^(development|production|test)$")
+    
+    # Database
+    DATABASE_URL: str = Field(..., description="PostgreSQL Connection String")
+    
+    # Supabase (Optional for now, but good to have)
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_KEY: Optional[str] = None
 
     # Discord Configuration
+    DISCORD_BOT_TOKEN: str = Field(..., min_length=10)
     GUILD_ID: int = Field(..., gt=0)
     RECRUITMENT_CHANNEL_ID: int
-    CHARACTER_SHEET_VAULT_CHANNEL_ID: int # Forum channel for approved character sheets
+    CHARACTER_SHEET_VAULT_CHANNEL_ID: int
     CEMETERY_CHANNEL_ID: int
 
     # Guild Member Role IDs
-    WANDERER_ROLE_ID: int
-    SEEKER_ROLE_ID: int
-    PATHFINDER_ROLE_ID: int
-    TRAILWARDEN_ROLE_ID: int
+    WANDERER_ROLE_ID: int = 0
+    SEEKER_ROLE_ID: int = 0
+    PATHFINDER_ROLE_ID: int = 0
+    TRAILWARDEN_ROLE_ID: int = 0
 
-    # Officer Role Mentions
-    PATHFINDER_ROLE_MENTION: str = "<@&PATHFINDER_ID>" # Default placeholders if not in env?
-    TRAILWARDEN_ROLE_MENTION: str = "<@&TRAILWARDEN_ID>"
+    # Role Mentions (Optional)
+    PATHFINDER_ROLE_MENTION: Optional[str] = None
+    TRAILWARDEN_ROLE_MENTION: Optional[str] = None
+
+
+
+    # Webhook Security
+    WEBHOOK_SECRET: str = Field(..., min_length=32)
+    PORT: int = 8080
 
     # Bot Behavior
     INTERACTIVE_TIMEOUT_SECONDS: int = 300
     POLL_INTERVAL_SECONDS: int = 60
-    DEFAULT_PORTRAIT_URL: str = "https://i.imgur.com/default_placeholder.png"
     
-    # Constants
+    # Visuals
     APPROVE_EMOJI: str = "✅"
     REJECT_EMOJI: str = "❌"
+    DEFAULT_PORTRAIT_URL: str = "https://i.imgur.com/placeholder.png"
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
-    @property
-    def GUILD_MEMBER_ROLE_IDS(self) -> List[int]:
-        return [
-            self.WANDERER_ROLE_ID,
-            self.SEEKER_ROLE_ID,
-            self.PATHFINDER_ROLE_ID,
-            self.TRAILWARDEN_ROLE_ID
-        ]
-
-    @property
-    def LIFECYCLE_ROLE_IDS(self) -> List[int]:
-        return [
-            self.PATHFINDER_ROLE_ID,
-            self.TRAILWARDEN_ROLE_ID
-        ]
-    
-    @property
-    def OFFICER_ROLE_IDS(self) -> List[int]:
-         # In v1 logic, officers were Pathfinders + Trailwardens
-         return self.LIFECYCLE_ROLE_IDS
-
-    @property
-    def CLASS_EMOJIS(self) -> Dict[str, str]:
-        from domain.models import CLASS_DATA
-        return {k: v.emoji for k, v in CLASS_DATA.items()}
+    # Computed properties
+    GUILD_MEMBER_ROLE_IDS: List[int] = []
+    OFFICER_ROLE_IDS: List[int] = []
 
     @model_validator(mode='after')
-    def check_guild_member_roles(self) -> 'Settings':
-        """
-        Custom validation to ensure at least one guild member role is configured.
-        Runs after all fields are validated.
-        """
-        if all(r == 0 for r in self.GUILD_MEMBER_ROLE_IDS):
-             raise ValueError("At least one Guild Member Role ID must be configured.")
+    def compute_role_lists(self):
+        self.GUILD_MEMBER_ROLE_IDS = [
+            self.WANDERER_ROLE_ID, 
+            self.SEEKER_ROLE_ID, 
+            self.PATHFINDER_ROLE_ID, 
+            self.TRAILWARDEN_ROLE_ID
+        ]
+        self.OFFICER_ROLE_IDS = [
+            self.PATHFINDER_ROLE_ID, 
+            self.TRAILWARDEN_ROLE_ID
+        ]
         return self
+
+
+
+    class Config:
+        env_file = ".env"
+        extra = "ignore"
 
 _settings_instance: Optional[Settings] = None
 
@@ -79,6 +88,3 @@ def get_settings() -> Settings:
     if _settings_instance is None:
         _settings_instance = Settings()
     return _settings_instance
-
-# Do not instantiate at module level
-# settings = Settings()

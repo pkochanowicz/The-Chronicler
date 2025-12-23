@@ -94,6 +94,10 @@ class ChallengeMode(enum.Enum):
     Immortal = "Immortal"
     Inferno = "Inferno"
 
+class BankTransactionTypeEnum(enum.Enum):
+    DEPOSIT = "DEPOSIT"
+    WITHDRAWAL = "WITHDRAWAL"
+
 # --- Core Entities (from docs/architecture_UI_UX.md 2.3.2 Core Entity Schemas) ---
 
 class Character(Base):
@@ -229,6 +233,8 @@ class Item(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
     item_set = relationship("ItemSet", back_populates="items")
+    # New: Link to guild bank items
+    bank_entries = relationship("GuildBankItem", back_populates="item")
 
     __table_args__ = (
         CheckConstraint('required_level >= 1 AND required_level <= 60', name='item_required_level_range'),
@@ -367,3 +373,39 @@ class Image(Base):
     status = Column(String(32), default="active", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+# --- Guild Bank Tables (New) ---
+
+class GuildBankItem(Base):
+    __tablename__ = "guild_bank_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    item_id = Column(BigInteger, ForeignKey("items.id"), nullable=False)
+    count = Column(Integer, default=0, nullable=False)
+    category = Column(String(64), default="General", nullable=False)
+    location = Column(String(128), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    item = relationship("Item", back_populates="bank_entries")
+
+    __table_args__ = (
+        CheckConstraint('count >= 0', name='bank_item_count_positive'),
+    )
+
+class GuildBankTransaction(Base):
+    __tablename__ = "guild_bank_transactions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    item_id = Column(BigInteger, ForeignKey("items.id"), nullable=False)
+    user_id = Column(BigInteger, nullable=False) # Discord User ID
+    transaction_type = Column(Enum(BankTransactionTypeEnum), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    notes = Column(Text, nullable=True)
+
+    item = relationship("Item") # Unidirectional link to Item
+
+    __table_args__ = (
+        CheckConstraint('quantity > 0', name='transaction_quantity_positive'),
+    )

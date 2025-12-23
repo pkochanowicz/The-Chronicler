@@ -1,10 +1,10 @@
-# tests/integration/services/test_character_service.py
 import pytest
-from services.character_service import CharacterService
+import pytest_asyncio
 from models import pydantic_models
-from uuid import UUID
+from services.character_service import CharacterService
+from schemas.db_schemas import CharacterRaceEnum, CharacterClassEnum, CharacterRoleEnum
 
-# Use the 'db_session' fixture from conftest.py which connects to the Testcontainer
+# Use the 'async_session' fixture from conftest.py which connects to the Testcontainer
 @pytest.mark.asyncio
 async def test_create_character_flow(async_session):
     """
@@ -15,30 +15,31 @@ async def test_create_character_flow(async_session):
     
     # 1. Prepare Data
     char_data = pydantic_models.CharacterCreate(
-        discord_id="999888777",
-        character_name="Thorgar_Test",
-        race="Orc",
-        faction="Horde",
-        class_name="Warrior",
-        level=10,
-        challenge_mode="Hardcore", # Enum name might differ, checking definition
-        story="A test warrior."
+        discord_user_id=999888777,
+        discord_username="ThorgarUser",
+        name="Thorgar_Test",
+        race=CharacterRaceEnum.Orc,
+        class_name=CharacterClassEnum.Warrior,
+        roles=[CharacterRoleEnum.Tank],
+        professions=["Mining"],
+        backstory="A test warrior.",
+        trait_1="Strong",
+        trait_2="Brave",
+        trait_3="Orcish"
     )
     
-    # 2. Execute Service Method
+    # 2. Execute Logic
     created_char = await service.create_character(char_data)
     
-    # 3. Verify Result (Pydantic Model)
-    assert created_char.character_name == "Thorgar_Test"
-    assert isinstance(created_char.id, UUID)
-    assert created_char.level == 10
+    # 3. Verify Persistence
+    assert created_char.id is not None
+    assert created_char.name == "Thorgar_Test"
     
-    # 4. Verify DB Persistence (Query directly)
-    # We can use the service again to fetch, or raw SQL if we want to be strict.
-    # Using service to test 'get_character_by_id' as well.
-    fetched_char = await service.get_character_by_id(created_char.id)
+    # 4. Verify Retrieval
+    fetched_char = await service.get_character_by_discord_id(999888777)
     assert fetched_char is not None
-    assert fetched_char.discord_id == "999888777"
+    assert fetched_char.id == created_char.id
+    assert fetched_char.discord_user_id == 999888777
 
 @pytest.mark.asyncio
 async def test_duplicate_character_prevention(async_session):
@@ -46,28 +47,33 @@ async def test_duplicate_character_prevention(async_session):
     service = CharacterService(async_session)
     
     char_data = pydantic_models.CharacterCreate(
-        discord_id="111222333",
-        character_name="UniqueName",
-        race="Human",
-        faction="Alliance",
-        class_name="Mage",
-        level=1,
-        challenge_mode="None"
+        discord_user_id=111222333,
+        discord_username="UniqueUser",
+        name="UniqueName",
+        race=CharacterRaceEnum.Human,
+        class_name=CharacterClassEnum.Mage,
+        roles=[CharacterRoleEnum.DPS],
+        backstory="Unique story",
+        trait_1="Smart",
+        trait_2="Quick",
+        trait_3="Magical"
     )
     
-    # Create first
     await service.create_character(char_data)
     
-    # Try to create identical one (assuming unique constraint on name or ID is not set on model but maybe logic)
-    # If the DB schema has UNIQUE(name), this should raise an IntegrityError.
-    # Let's assume we want to catch that.
-    
+    # Try to create again with same Name (should fail due to Unique constraint on name)
     from sqlalchemy.exc import IntegrityError
     
-    # Note: 'character_name' might not be unique in schema_v1.sql without checking it.
-    # If not unique, this test serves to document that behavior. 
-    # Checking Technical docs: "name (Text): Character name (Unique)." -> It IS unique.
-    
+    char_data_duplicate = pydantic_models.CharacterCreate(
+        discord_user_id=444555666, # Different user
+        discord_username="OtherUser",
+        name="UniqueName", # Same Name
+        race=CharacterRaceEnum.Human,
+        class_name=CharacterClassEnum.Mage,
+        roles=[CharacterRoleEnum.DPS],
+        backstory="Copycat",
+        trait_1="A", trait_2="B", trait_3="C"
+    )
+
     with pytest.raises(IntegrityError):
-        await service.create_character(char_data)
-        await db_session.flush() # Force SQL execution
+        await service.create_character(char_data_duplicate)

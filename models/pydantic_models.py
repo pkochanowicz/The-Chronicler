@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
 from schemas.db_schemas import (
@@ -62,7 +62,8 @@ class CharacterInDB(CharacterCreate):
     recruitment_msg_id: Optional[int] = None
     forum_post_id: Optional[int] = None
     reviewed_by_user_id: Optional[int] = None
-    embed_json: Dict[str, Any] = Field(default_factory=dict)
+    # Changed from Dict to Union[Dict, List] to support multiple embeds
+    embed_json: Union[Dict[str, Any], List[Dict[str, Any]]] = Field(default_factory=list)
     death_cause: Optional[str] = None
     death_story: Optional[str] = None
     talents_json: Dict[str, Any] = Field(default_factory=dict)

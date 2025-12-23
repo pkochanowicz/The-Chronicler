@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
-from uuid import UUID
 
 from db.database import get_db
 from models import pydantic_models
@@ -17,7 +16,6 @@ async def create_character(
     character: pydantic_models.CharacterCreate,
     service: CharacterService = Depends(get_character_service)
 ):
-    # TODO: Add validation if discord_id already exists
     return await service.create_character(character)
 
 @router.get("/", response_model=List[pydantic_models.CharacterInDB])
@@ -29,7 +27,7 @@ async def get_all_characters(
 
 @router.get("/{character_id}", response_model=pydantic_models.CharacterInDB)
 async def get_character_by_id(
-    character_id: UUID,
+    character_id: int, # Changed UUID to int
     service: CharacterService = Depends(get_character_service)
 ):
     character = await service.get_character_by_id(character_id)
@@ -39,7 +37,7 @@ async def get_character_by_id(
 
 @router.get("/by-discord/{discord_id}", response_model=pydantic_models.CharacterInDB)
 async def get_character_by_discord_id(
-    discord_id: str,
+    discord_id: int, # Changed str to int
     service: CharacterService = Depends(get_character_service)
 ):
     character = await service.get_character_by_discord_id(discord_id)
@@ -49,7 +47,7 @@ async def get_character_by_discord_id(
 
 @router.patch("/{character_id}", response_model=pydantic_models.CharacterInDB)
 async def update_character(
-    character_id: UUID,
+    character_id: int, # Changed UUID to int
     character: pydantic_models.CharacterUpdate,
     service: CharacterService = Depends(get_character_service)
 ):
@@ -60,7 +58,7 @@ async def update_character(
 
 @router.delete("/{character_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_character(
-    character_id: UUID,
+    character_id: int, # Changed UUID to int
     service: CharacterService = Depends(get_character_service)
 ):
     success = await service.delete_character(character_id)
@@ -70,7 +68,7 @@ async def delete_character(
 
 @router.post("/{character_id}/bury", response_model=pydantic_models.GraveyardInDB, status_code=status.HTTP_201_CREATED)
 async def bury_character(
-    character_id: UUID,
+    character_id: int, # Changed UUID to int
     cause_of_death: str,
     eulogy: Optional[str] = None,
     service: CharacterService = Depends(get_character_service)
@@ -82,8 +80,10 @@ async def bury_character(
 
 @router.get("/{character_id}/graveyard", response_model=List[pydantic_models.GraveyardInDB])
 async def get_character_graveyard_entries(
-    character_id: UUID,
+    character_id: int, # Changed UUID to int
     service: CharacterService = Depends(get_character_service)
 ):
-    entries = await service.graveyard_repo.get_graveyard_entries_by_character_id(character_id)
-    return [pydantic_models.GraveyardInDB.model_validate(entry) for entry in entries]
+    # Fixed: accessing repo directly through service wrapper
+    entries = await service.get_graveyard_entries_for_character(character_id) 
+    # service method returns Pydantic models, not DB objects
+    return entries
