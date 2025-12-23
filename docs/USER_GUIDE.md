@@ -1,6 +1,6 @@
 # 📖 The Chronicler's User Guide
 
-**Version 2.0 - The Ascension**
+**Version 2.1 - The Ascension**
 
 Greetings, hero. This tome serves as your guide to interacting with **The Chronicler**, the arcane construct that manages our guild's records.
 
@@ -13,18 +13,17 @@ To join the ranks of Azeroth Bound, you must inscribe your name in the archives.
 **Command:** `/register_character`
 
 ### The Ritual
-1. **Introduction:** Chronicler Thaldrin will greet you. You can choose to link your Discord identity or remain anonymous.
-2. **Identity:** Enter your character's full name.
-3. **Heritage:** Choose your **Race** (e.g., Human, Dwarf, Orc, Undead).
-4. **Calling:** Choose your **Class** (e.g., Warrior, Mage, Druid).
-5. **Roles:** Select your combat roles (Tank, Healer, Melee DPS, etc.).
-6. **Crafts:** (Optional) Select your professions.
-7. **Traits:** Enter 3 defining traits (e.g., "Brave", "Stubborn", "Kind").
-8. **The Tale:** Write your backstory (max 1024 chars).
-9. **Visage:** Upload a portrait image directly to the chat!
-10. **Confirmation:** Review your character sheet and confirm.
+1. **Introduction:** Chronicler Thaldrin will greet you in a private vision (ephemeral message).
+2. **Identity:** Enter your character's name, Race, and Class.
+3. **Details:** Select your Roles (Tank, Healer, DPS) and Professions.
+4. **The Tale:** Write your backstory.
+5. **Visage:** Upload a portrait image.
+6. **Submission:** A new thread is created in **#recruitment**. This is your application ticket.
 
-**Note:** Your registration is private until approved by an officer.
+**Officer Review:**
+*   **Accepted:** You will receive a Welcome DM, and your official sheet will appear in **#character_sheet_vault**.
+*   **Declined:** You will receive a DM explaining the decision.
+*   **Edit Requested:** An officer may ask for changes before approval.
 
 ---
 
@@ -34,37 +33,35 @@ The guild bank is open for business!
 
 ### Depositing Items
 Have spare loot?
-**Command:** `/bank deposit [item] [quantity] [category] [notes]`
-*Example:* `/bank deposit "Linen Cloth" 20 "Material" "Farmed in Westfall"`
-
-### Checking Your Stash
-See what you've contributed.
-**Command:** `/bank mydeposits`
+**Command:** `/bank deposit [item_name] [quantity]`
+*Example:* `/bank deposit "Linen Cloth" 20`
 
 ### Viewing the Vault
 See what's available for withdrawal.
 **Command:** `/bank view`
+*(Displays a list of items currently in the guild's possession)*
 
 ### Withdrawing Items
-Found something you need? (Requires Officer approval IRL usually, but technically open)
+Found something you need?
 **Command:** `/bank withdraw [item_id]`
-*(Get the Item ID from `/bank view` or `/bank mydeposits`)*
+*(Requests withdrawal. Officers will be notified or the transaction logged based on permissions)*
 
 ---
 
-## ⚔️ Talent Audits
+## ⚔️ Talent Audits & Editor
 
 Ensure your build follows the Classic+ laws.
 
-**Command:** `/talent audit [character_name] [level] [talents_json]`
+**Command:** `/talent editor`
+*Opens an interactive interface to build and save your talent spec.*
 
-*Example JSON:* `{"Improved Heroic Strike": 3, "Tactical Mastery": 5}`
+**Command:** `/talent audit [character_name]`
+*Validates a character's current build against the rules of Turtle WoW.*
 
-The Chronicler will check:
-- Are these valid talents for your class?
+The Chronicler checks:
 - Do you have enough points at your level?
-- Have you met the prerequisites?
-- Are you trying to cheat the tiers?
+- Have you met the tier requirements?
+- Are you trying to cheat the prerequisites?
 
 ---
 
@@ -72,16 +69,29 @@ The Chronicler will check:
 
 *For Officers Only*
 
-When a hero falls, we honor them.
+When a hero falls in Hardcore mode, we honor them.
 
 **Command:** `/bury`
 
-This solemn interactive ceremony will:
-1. Identify the fallen hero.
-2. Record the cause of death.
-3. Allow for a final eulogy.
-4. Move their record to the **#cemetery**.
-5. Notify the guild of their passing.
+This solemn ceremony will:
+1. Identify the fallen hero from the registry.
+2. Record the cause of death and a final eulogy.
+3. Move their record from the Vault to the **#cemetery**.
+4. Lock their file forever.
+
+---
+
+## 📜 The Journal (Database Search)
+
+Seek knowledge from the archives.
+
+**Command:** `/db_search [type] [query]`
+*Types: item, quest, npc, spell*
+
+*Example:* `/db_search item "Thunderfury"`
+*Example:* `/db_search npc "Mankrik"`
+
+Results are published to the **#journal** channel for all to see.
 
 ---
 

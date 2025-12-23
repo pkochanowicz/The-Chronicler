@@ -1,10 +1,45 @@
+# Dockerfile.uv
 FROM python:3.11-slim
 
+# Set non-interactive mode for apt-get
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install curl
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Install uv
 RUN pip install uv
+
+# Install Poetry using its official installer script (without --install-directory)
+RUN curl -sSL https://install.python-poetry.org | python -
+
+# Add Poetry to PATH (installer defaults to ~/.local/bin)
+ENV PATH="/root/.local/bin:/root/.poetry/bin:$PATH"
+
 WORKDIR /app
 
+# Copy dependency files
 COPY pyproject.toml poetry.lock* README.md ./
-RUN uv pip install --system -r pyproject.toml
 
+# Install export plugin and export dependencies
+RUN poetry self add poetry-plugin-export
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+
+# Install dependencies from requirements.txt using uv
+RUN uv pip install --system -r requirements.txt
+
+# --- Build-time Discord Test Execution ---
+# Run integration tests that verify Discord interaction logic.
+# These tests are mocked and do not require a live Discord connection.
+# If these tests fail, the Docker image build will fail, preventing deployment of broken code.
+COPY tests/integration/test_webhooks.py tests/integration/
+COPY tests/conftest.py tests/
+COPY services/webhook_handler.py services/
+COPY config/settings.py config/
+RUN poetry run pytest tests/integration/test_webhooks.py
+
+# Copy the rest of the application code
 COPY . .
+
+# Set default command to run the application
 CMD ["python", "main.py"]

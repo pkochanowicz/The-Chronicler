@@ -1,122 +1,173 @@
-# Azeroth Bound Discord Bot
-# Copyright (C) 2025 [Paweł Kochanowicz - <github.com/pkochanowicz> ]
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 import pytest
-import datetime
+import asyncio
+import httpx
 import os
-import base64
 from unittest.mock import MagicMock, AsyncMock
+import sys 
+import pytest_asyncio 
 
-# -----------------------------------------------------------------------------
-# GLOBAL TEST SETUP
-# -----------------------------------------------------------------------------
-# Force valid dummy credentials for all tests to prevent Settings init crash.
-# This must run before 'config.settings' is imported by any test module.
-os.environ["GOOGLE_CREDENTIALS_B64"] = base64.b64encode(b'{"type": "service_account"}').decode('utf-8')
-# -----------------------------------------------------------------------------
+# --- Set environment variables for Pydantic Settings IMMEDIATELY for collection phase ---
+os.environ["DATABASE_URL"] = "postgresql+asyncpg://user:password@localhost:5432/testdb"
+os.environ["SUPABASE_URL"] = "https://mock.supabase.co"
+os.environ["SUPABASE_KEY"] = "mock_supabase_key"
+os.environ["DISCORD_BOT_TOKEN"] = "mock_discord_bot_token_long_enough" 
+os.environ["WEBHOOK_SECRET"] = "a_very_long_mock_secret_for_testing_purposes"
+os.environ["GUILD_ID"] = "12345"
+os.environ["RECRUITMENT_CHANNEL_ID"] = "67890"
+os.environ["FORUM_CHANNEL_ID"] = "11223"
+os.environ["CEMETERY_CHANNEL_ID"] = "44556"
+os.environ["WANDERER_ROLE_ID"] = "100"
+os.environ["SEEKER_ROLE_ID"] = "200"
+os.environ["PATHFINDER_ROLE_ID"] = "300"
+os.environ["TRAILWARDEN_ROLE_ID"] = "400"
+os.environ["INTERACTIVE_TIMEOUT_SECONDS"] = "10"
+os.environ["POLL_INTERVAL_SECONDS"] = "5"
+os.environ["DEFAULT_PORTRAIT_URL"] = "https://mock.url/portrait.png"
+os.environ["PATHFINDER_ROLE_MENTION"] = "<@&300>"
+os.environ["TRAILWARDEN_ROLE_MENTION"] = "<@&400>"
+os.environ["CHARACTER_SHEET_VAULT_CHANNEL_ID"] = "99887"
+
+import config.settings 
+from main import app 
+
+@pytest.fixture(scope="session", autouse=True)
+def set_pydantic_settings_env_vars():
+    original_env = {key: os.environ.get(key) for key in [
+        "DATABASE_URL", "SUPABASE_URL", "SUPABASE_KEY", "DISCORD_BOT_TOKEN", "WEBHOOK_SECRET",
+        "GUILD_ID", "RECRUITMENT_CHANNEL_ID", "FORUM_CHANNEL_ID", "CEMETERY_CHANNEL_ID",
+        "WANDERER_ROLE_ID", "SEEKER_ROLE_ID", "PATHFINDER_ROLE_ID", "TRAILWARDEN_ROLE_ID",
+        "INTERACTIVE_TIMEOUT_SECONDS", "POLL_INTERVAL_SECONDS", "DEFAULT_PORTRAIT_URL",
+        "PATHFINDER_ROLE_MENTION", "TRAILWARDEN_ROLE_MENTION", "CHARACTER_SHEET_VAULT_CHANNEL_ID"
+    ]}
+    os.environ["DATABASE_URL"] = "postgresql+asyncpg://user:password@localhost:5432/testdb"
+    yield
+    for key, value in original_env.items():
+        if value is None:
+            del os.environ[key]
+        else:
+            os.environ[key] = value
+
+@pytest_asyncio.fixture(scope="session")
+def event_loop():
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+@pytest_asyncio.fixture(scope="session")
+def postgres_container():
+    try:
+        from testcontainers.postgres import PostgresContainer
+    except ImportError:
+        pytest_asyncio.skip("testcontainers not installed", allow_module_level=True)
+    try:
+        postgres = PostgresContainer("postgres:15", driver="asyncpg")
+        postgres.start()
+        db_url = postgres.get_connection_url().replace("psycopg2", "asyncpg")
+        os.environ["DATABASE_URL"] = db_url 
+        yield postgres
+    finally:
+        postgres.stop()
+
+@pytest_asyncio.fixture(scope="session")
+async def initialized_test_db_engine(postgres_container):
+    from sqlalchemy.ext.asyncio import create_async_engine
+    
+    settings = config.settings.get_settings() 
+    settings.DATABASE_URL = os.environ["DATABASE_URL"] 
+    
+    import db.database
+    db.database._engine = create_async_engine(settings.DATABASE_URL, echo=False)
+    db.database._AsyncSessionLocal = None 
+    
+    from schemas.db_schemas import Base
+    import schemas.db_schemas
+    
+    engine = db.database._engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all) 
+        await conn.run_sync(Base.metadata.create_all) 
+        
+    yield engine
+    await engine.dispose()
+
+@pytest_asyncio.fixture
+async def async_session(initialized_test_db_engine):
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.ext.asyncio import AsyncSession
+    
+    async_session = sessionmaker(
+        initialized_test_db_engine, class_=AsyncSession, expire_on_commit=False
+    )
+    async with async_session() as session:
+        yield session
+        await session.rollback()
+
+@pytest_asyncio.fixture(scope="session")
+async def empty_test_db_engine(postgres_container):
+    from sqlalchemy.ext.asyncio import create_async_engine
+    settings = config.settings.get_settings() 
+    settings.DATABASE_URL = os.environ["DATABASE_URL"]
+    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+    yield engine
+    await engine.dispose()
 
 @pytest.fixture
-def mock_settings(mocker):
-    """Mock configuration settings"""
-    # Patch the singleton instance attributes
-    mocker.patch("config.settings.settings.WEBHOOK_SECRET", "test_secret_123")
-    mocker.patch("config.settings.settings.DEFAULT_PORTRAIT_URL", "https://example.com/default.png")
-    return mocker
+def mock_settings():
+    mock = MagicMock()
+    mock.WEBHOOK_SECRET = "test_secret_123_longer_than_32_chars"
+    mock.DISCORD_BOT_TOKEN = "mock_discord_bot_token_long_enough"
+    mock.RECRUITMENT_CHANNEL_ID = 67890
+    mock.CEMETERY_CHANNEL_ID = 44556
+    mock.PATHFINDER_ROLE_ID = 300
+    mock.TRAILWARDEN_ROLE_ID = 400
+    mock.GUILD_MEMBER_ROLE_IDS = [100, 200, 300, 400]
+    mock.OFFICER_ROLE_IDS = [300, 400]
+    mock.PATHFINDER_ROLE_MENTION = "<@&300>"
+    mock.TRAILWARDEN_ROLE_MENTION = "<@&400>"
+    mock.APPROVE_EMOJI = "✅"
+    mock.REJECT_EMOJI = "❌"
+    mock.PORT = 8080
+    mock.DEFAULT_PORTRAIT_URL = "https://mock.url/portrait.png"
+    mock.INTERACTIVE_TIMEOUT_SECONDS = 10
+    mock.POLL_INTERVAL_SECONDS = 5
+    mock.CHARACTER_SHEET_VAULT_CHANNEL_ID = 99887
+    return mock
 
 @pytest.fixture
-def sample_character_data():
-    """Returns a dictionary with valid sample character data (27 columns)"""
-    return {
-        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "discord_id": "123456789",
-        "discord_name": "TestUser#1234",
-        "char_name": "Thorgar",
-        "race": "Dwarf",
-        "class": "Warrior",
-        "roles": "Tank, Melee DPS",
-        "professions": "Mining, Blacksmithing",
-        "backstory": "A brave warrior from the mountains.",
-        "personality": "Stubborn but loyal.",
-        "quotes": "For Khaz Modan!",
-        "portrait_url": "https://example.com/thorgar.png",
-        "trait_1": "Brave",
-        "trait_2": "Loyal",
-        "trait_3": "Stubborn",
-        "status": "PENDING",
-        "confirmation": True,
-        "request_sdxl": False,
-        "recruitment_msg_id": "987654321",
-        "forum_post_url": "https://discord.com/channels/1/2/3",
-        "reviewed_by": "999888777",
-        "embed_json": '[{"title": "Thorgar"}]',
-        "death_cause": None,
-        "death_story": None,
-        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "notes": "Test notes"
-    }
-
-@pytest.fixture
-def mock_discord_interaction():
-    """Mocks a Discord interaction object"""
-    interaction = AsyncMock()
+def mock_interaction():
+    interaction = AsyncMock(spec=discord.Interaction)
+    interaction.response = AsyncMock()
+    interaction.followup = AsyncMock()
+    interaction.user = MagicMock(spec=discord.User)
     interaction.user.id = 123456789
     interaction.user.name = "TestUser"
-    interaction.user.discriminator = "1234"
-    interaction.user.mention = "<@123456789>"
-    interaction.guild.id = 555555
-    interaction.channel_id = 444444
-    
-    # Mock response
-    interaction.response = AsyncMock()
-    interaction.response.send_message = AsyncMock()
-    interaction.response.defer = AsyncMock()
-    interaction.followup = AsyncMock()
-    interaction.followup.send = AsyncMock()
-    
+    interaction.user.display_name = "Test User"
+    interaction.guild = MagicMock(spec=discord.Guild)
+    interaction.guild.id = 987654321
+    interaction.channel = MagicMock(spec=discord.TextChannel)
+    interaction.channel.id = 555555555
+    interaction.client = AsyncMock()
     return interaction
 
 @pytest.fixture
-def mock_sheets_client():
-    """Mocks the Google Sheets client"""
-    client = MagicMock()
-    sheet = MagicMock()
-    client.open_by_key.return_value.sheet1 = sheet
-    return client
+def mock_discord_context():
+    ctx = AsyncMock()
+    ctx.author.id = 123456789
+    ctx.author.name = "TestUser"
+    ctx.send = AsyncMock()
+    return ctx
 
-@pytest.fixture
-def valid_races():
-    return [
-        "Human", "Dwarf", "Night Elf", "Gnome", "High Elf",
-        "Orc", "Undead", "Tauren", "Troll", "Goblin",
-        "Other"
-    ]
+from fastapi.testclient import TestClient
+import discord
+from httpx import AsyncClient, ASGITransport
 
-@pytest.fixture
-def valid_classes():
-    return [
-        "Warrior", "Paladin", "Hunter", "Rogue", "Priest",
-        "Shaman", "Mage", "Warlock", "Druid"
-    ]
+@pytest.fixture(scope="session")
+def client(initialized_test_db_engine):
+    return TestClient(app)
 
-@pytest.fixture
-def valid_roles():
-    return ["Tank", "Healer", "Melee DPS", "Ranged DPS", "Support"]
-
-@pytest.fixture
-def mock_complete_character_data(sample_character_data):
-    """Alias for sample_character_data to satisfy test requirements."""
-    return sample_character_data
+@pytest_asyncio.fixture(scope="session")
+async def async_client(initialized_test_db_engine):
+    """Async Client for testing FastAPI endpoints without blocking loops."""
+    # Use ASGITransport to test the app directly without a running server, but in async context
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c

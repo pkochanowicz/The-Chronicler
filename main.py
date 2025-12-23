@@ -1,97 +1,90 @@
-# Azeroth Bound Discord Bot
-# Copyright (C) 2025 [Paweł Kochanowicz - <github.com/pkochanowicz> ]
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-"""
-Azeroth Bound Bot - Entry Point
-Main entry point for the Discord bot.
-"""
 import asyncio
+import os
 import logging
-from config.settings import settings
-from services.discord_client import bot
-from services.sheets_service import google_sheets_service
-from mcp.server import run_mcp_server
+import uvicorn
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+# Configure logging first to capture everything
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def setup_hook():
-    """Load extensions on startup."""
+logger.info("Initializing application module...")
+
+try:
+    from db.database import init_db
+    from services.discord_client import bot
+    from config.settings import get_settings
+    from routers import characters, webhooks, health
+except Exception as e:
+    logger.critical(f"Failed to import dependencies: {e}", exc_info=True)
+    raise
+
+async def load_extensions():
+    """Load Discord bot extensions (cogs)."""
     extensions = [
         "commands.character_commands",
-        "commands.officer_commands",
+        "commands.officer_commands", 
         "commands.bank_commands",
         "commands.talent_commands",
         "handlers.reaction_handler"
     ]
-    
     for ext in extensions:
         try:
             await bot.load_extension(ext)
             logger.info(f"Loaded extension: {ext}")
         except Exception as e:
-            logger.error(f"Failed to load extension {ext}: {e}")
+            logger.error(f"Failed to load extension {ext}: {e}", exc_info=True)
 
-def main():
-    """Main entry point."""
+async def start_discord_bot():
+    """Start the Discord bot in the background."""
+    settings = get_settings() # Get settings instance
     try:
-        # Set setup_hook
-        bot.setup_hook = setup_hook
-
-        # Use global sheets_service
-        # sheets_service = CharacterRegistryService() # Removed
-
-        async def run_mcp():
-            try:
-                await run_mcp_server(bot, google_sheets_service) # Pass global service
-            except Exception as e:
-                logger.error(f"Failed to start MCP server: {e}")
-
-        async def run_webhook():
-            try:
-                await start_webhook_server(bot)
-            except Exception as e:
-                logger.error(f"Failed to start webhook server: {e}")
-
-        # Inject webhook and mcp tasks into setup_hook
-        original_setup_hook = bot.setup_hook
-        async def combined_setup_hook():
-            if original_setup_hook:
-                await original_setup_hook()
-            bot.loop.create_task(run_webhook())
-            bot.loop.create_task(run_mcp())
-        
-        bot.setup_hook = combined_setup_hook
-
-        # Run the bot
-        logger.info("Starting Azeroth Bound Bot...")
-        bot.run(settings.DISCORD_BOT_TOKEN)
-
-    except ValueError as e:
-        logger.error(f"Configuration error: {e}")
-        exit(1)
+        async with bot:
+            await load_extensions()
+            logger.info("Starting Discord bot...")
+            await bot.start(settings.DISCORD_BOT_TOKEN) # Use settings.DISCORD_BOT_TOKEN
     except Exception as e:
-        logger.error(f"Fatal error: {e}", exc_info=True)
-        exit(1)
+        logger.critical(f"Discord bot task failed: {e}", exc_info=True)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup event
+    try:
+        logger.info("Initializing database...")
+        await init_db()
+        
+        # Start Discord bot task
+        logger.info("Initializing Discord bot task...")
+        bot_task = asyncio.create_task(start_discord_bot())
+        
+        yield
+        
+        # Shutdown event
+        logger.info("Shutting down...")
+    except Exception as e:
+        logger.critical(f"Lifespan error: {e}", exc_info=True)
+
+app = FastAPI(title="The Chronicler", lifespan=lifespan)
+
+# Include routers
+try:
+    app.include_router(characters.router, prefix="/characters", tags=["characters"])
+    app.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
+    app.include_router(health.router, prefix="/health", tags=["health"])
+except Exception as e:
+    logger.error(f"Failed to include routers: {e}", exc_info=True)
+
+@app.get("/")
+async def read_root():
+    return {"message": "The Chronicler is Online."}
 
 if __name__ == "__main__":
-    main()
+    # Get port from environment or default to 8080
+    port = int(os.getenv("PORT", 8080))
+    logger.info(f"Starting Uvicorn on port {port}...")
+    try:
+        # Run Uvicorn
+        uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+    except Exception as e:
+        logger.critical(f"Uvicorn failed: {e}", exc_info=True)

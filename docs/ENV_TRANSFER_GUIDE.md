@@ -246,7 +246,7 @@ flyctl deploy
 2. **Deploy the app**: `flyctl deploy`
 3. **Watch logs**: `flyctl logs --app the-chronicler`
 4. **Check health**: `curl https://the-chronicler.fly.dev/health` (should return "OK")
-5. **Test webhook**: Use the Google Apps Script test function
+
 
 ---
 

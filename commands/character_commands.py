@@ -22,11 +22,12 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from flows.registration_flow import RegistrationFlow
-from config.settings import settings
+from config.settings import get_settings
 
 class CharacterCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.settings = get_settings()
 
     @app_commands.command(name="register_character", description="Begin the journey to register a new character.")
     async def register_character(self, interaction: discord.Interaction):
@@ -36,7 +37,7 @@ class CharacterCommands(commands.Cog):
         """
         # Check permissions (Guild Member)
         user_roles = [r.id for r in interaction.user.roles]
-        allowed_roles = settings.GUILD_MEMBER_ROLE_IDS
+        allowed_roles = self.settings.GUILD_MEMBER_ROLE_IDS
         
         # If all allowed roles are 0 (not configured), we might allow everyone or block.
         # Assuming at least one should be configured.

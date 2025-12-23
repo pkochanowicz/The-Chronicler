@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+
+# Python / Virtual Environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment Variables & Secrets
+.env
+.env.*
+.env.example
+credentials.json
+client_secret.json
+
+# Testing / Quality
+.pytest_cache/
+.coverage
+htmlcov/
+TESTING_RESULTS.md
+tests/
+# We might want tests in the build for multi-stage, but usually not in the final image.
+# Keeping them out for speed unless needed.
+
+# Documentation & large assets
+docs/
+*.md
+!README.md
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+scripts/
+docker-compose.yml
+Dockerfile
+Dockerfile.*
+fly.toml
