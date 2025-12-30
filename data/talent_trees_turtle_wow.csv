@@ -1,0 +1,28 @@
+background_image_url,class,tree_name,id
+https://i.imgur.com/dG8sqvo.jpeg,WARRIOR,ARMS,warrior_arms
+https://i.imgur.com/zksnzOE.jpeg,WARRIOR,FURY,warrior_fury
+https://i.imgur.com/nBFGuoD.jpeg,WARRIOR,PROTECTION,warrior_protection
+https://i.imgur.com/JP8Gl2N.jpeg,PALADIN,HOLY,paladin_holy
+https://i.imgur.com/tXyypuW.jpeg,PALADIN,PROTECTION,paladin_protection
+https://i.imgur.com/13blQWM.jpeg,PALADIN,RETRIBUTION,paladin_retribution
+https://i.imgur.com/9IDZKjk.jpeg,HUNTER,BEAST MASTERY,hunter_beast mastery
+https://i.imgur.com/imOT6iL.jpeg,HUNTER,MARKSMANSHIP,hunter_marksmanship
+https://i.imgur.com/cehCppw.jpeg,HUNTER,SURVIVAL,hunter_survival
+https://i.imgur.com/wdMMU0H.jpeg,ROGUE,ASSASSINATION,rogue_assassination
+https://i.imgur.com/YwK1PZa.jpeg,ROGUE,COMBAT,rogue_combat
+https://i.imgur.com/MCiw1vw.jpeg,ROGUE,SUBTLETY,rogue_subtlety
+https://i.imgur.com/jb539sB.jpeg,PRIEST,DISCIPLINE,priest_discipline
+https://i.imgur.com/Ff4JPx7.jpeg,PRIEST,HOLY,priest_holy
+https://i.imgur.com/WdvVXDq.jpeg,PRIEST,SHADOW,priest_shadow
+https://i.imgur.com/tZhxnJZ.jpeg,SHAMAN,ELEMENTAL,shaman_elemental
+https://i.imgur.com/l5mMLXR.jpeg,SHAMAN,ENHANCEMENT,shaman_enhancement
+https://i.imgur.com/92yXUuM.jpeg,SHAMAN,RESTORATION,shaman_restoration
+https://i.imgur.com/jEEi4Sm.jpeg,MAGE,ARCANE,mage_arcane
+https://i.imgur.com/stbVfwD.jpeg,MAGE,FIRE,mage_fire
+,MAGE,FROST,mage_frost
+https://i.imgur.com/95rcgS7.jpeg,WARLOCK,AFFLICTION,warlock_affliction
+https://i.imgur.com/ntFjD9G.jpeg,WARLOCK,DEMONOLOGY,warlock_demonology
+https://i.imgur.com/S8X1OtI.jpeg,WARLOCK,DESTRUCTION,warlock_destruction
+https://i.imgur.com/Ob3ScSl.jpeg,DRUID,BALANCE,druid_balance
+https://i.imgur.com/TQZ5NPN.jpeg,DRUID,FERAL COMBAT,druid_feral combat
+https://i.imgur.com/ElJPrb1.jpeg,DRUID,RESTORATION,druid_restoration

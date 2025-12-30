@@ -5,7 +5,7 @@ from sqlalchemy.sql import func
 from db.database import Base
 import enum
 
-# --- Enums ---
+# --- Enums (from docs/architecture_UI_UX.md 2.3.1 Canonical Data Enums) ---
 
 class ItemQualityEnum(enum.Enum):
     Poor = 0
@@ -98,7 +98,7 @@ class BankTransactionTypeEnum(enum.Enum):
     DEPOSIT = "DEPOSIT"
     WITHDRAWAL = "WITHDRAWAL"
 
-# --- Tables ---
+# --- Core Entities (from docs/architecture_UI_UX.md 2.3.2 Core Entity Schemas) ---
 
 class Character(Base):
     __tablename__ = "characters"
@@ -109,8 +109,8 @@ class Character(Base):
     name = Column(String(64), unique=True, nullable=False)
     race = Column(Enum(CharacterRaceEnum), nullable=False)
     class_name = Column("class", Enum(CharacterClassEnum), nullable=False)
-    roles = Column(ARRAY(String), default=[], nullable=False) 
-    professions = Column(ARRAY(String), default=[], nullable=True) 
+    roles = Column(ARRAY(String), default=[], nullable=False) # TEXT[] per docs
+    professions = Column(ARRAY(String), default=[], nullable=True) # TEXT[] per docs
     backstory = Column(Text, nullable=False)
     personality = Column(Text, nullable=True)
     quotes = Column(Text, nullable=True)
@@ -172,7 +172,7 @@ class Talent(Base):
     name = Column(String(64), nullable=False)
     tree_id = Column(String(64), ForeignKey("talent_trees.id", ondelete="CASCADE"), nullable=False)
     tier = Column(Integer, nullable=False)
-    talent_column = Column("column", Integer, nullable=True) 
+    talent_column = Column("column", Integer, nullable=True) # Mapped to "column" in DB
     max_rank = Column(Integer, default=1, nullable=False)
     description = Column(Text, nullable=False)
     icon_url = Column(Text, nullable=False)
@@ -233,6 +233,7 @@ class Item(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
     item_set = relationship("ItemSet", back_populates="items")
+    # New: Link to guild bank items
     bank_entries = relationship("GuildBankItem", back_populates="item")
 
     __table_args__ = (
@@ -361,7 +362,7 @@ class Image(Base):
     usage_context = Column(String(64), nullable=False)
     entity_type = Column(String(64), nullable=True)
     entity_id = Column(BigInteger, nullable=True)
-    category_tags = Column(ARRAY(String), default=[], nullable=False)
+    category_tags = Column(ARRAY(String), default=[], nullable=False) # TEXT[]
     provenance_notes = Column(Text, nullable=True)
     permissions_level = Column(String(32), default="Public", nullable=False)
     is_animated = Column(Boolean, default=False, nullable=False)
@@ -373,7 +374,7 @@ class Image(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
-# --- Guild Bank Tables ---
+# --- Guild Bank Tables (New) ---
 
 class GuildBankItem(Base):
     __tablename__ = "guild_bank_items"
@@ -403,7 +404,7 @@ class GuildBankTransaction(Base):
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     notes = Column(Text, nullable=True)
 
-    item = relationship("Item")
+    item = relationship("Item") # Unidirectional link to Item
 
     __table_args__ = (
         CheckConstraint('quantity > 0', name='transaction_quantity_positive'),

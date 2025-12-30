@@ -1,189 +1,129 @@
-# Azeroth Bound Discord Bot
-# Copyright (C) 2025 [Paweł Kochanowicz - <github.com/pkochanowicz> ]
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
+# domain/validators.py
 """
 Validators for domain models and fields.
 """
-from typing import List, Dict
+from typing import List, Dict, Optional, Union
 import re
-from domain.models import CLASS_DATA
+from domain.game_data import CLASS_DATA # Updated import
 from domain.talent_data import TALENT_DATA
 
-class ValidationError(Exception):
-    """Raised when validation fails."""
+class ValidationError(ValueError):
+    """Exception raised for validation errors."""
     pass
 
 VALID_RACES = [
-    # Alliance
-    "Human", "Dwarf", "Night Elf", "Gnome", "High Elf",
-    # Horde
-    "Orc", "Undead", "Tauren", "Troll", "Goblin",
-    # Special/Rare
-    "Other"
+    "Human", "Dwarf", "Night Elf", "Gnome", 
+    "Orc", "Undead", "Tauren", "Troll", 
+    "Goblin", "High Elf", "Other" 
 ]
 
-VALID_CLASSES = list(CLASS_DATA.keys())
-
-VALID_ROLES = [
-    "Tank",
-    "Healer",
-    "Melee DPS",
-    "Ranged DPS",
-    "Support"
+VALID_CLASSES = [
+    "Warrior", "Paladin", "Hunter", "Rogue", "Priest", 
+    "Shaman", "Mage", "Warlock", "Druid"
 ]
+
+VALID_ROLES = ["Tank", "Healer", "Melee DPS", "Ranged DPS"]
 
 VALID_PROFESSIONS = [
-    "Alchemy",
-    "Blacksmithing",
-    "Enchanting",
-    "Engineering",
-    "Herbalism",
-    "Leatherworking",
-    "Mining",
-    "Skinning",
-    "Tailoring",
-    "Jewelcrafting",
-    "First Aid",
-    "Cooking",
-    "Fishing",
-    "Survival"
+    "Alchemy", "Blacksmithing", "Enchanting", "Engineering", 
+    "Herbalism", "Inscription", "Jewelcrafting", "Leatherworking", 
+    "Mining", "Skinning", "Tailoring",
+    "Cooking", "First Aid", "Fishing", "Survival"
 ]
 
+# Race-Class Combinations
+ALLOWED_COMBINATIONS: Dict[str, List[str]] = {
+    "Human": ["Warrior", "Paladin", "Rogue", "Priest", "Mage", "Warlock"],
+    "Dwarf": ["Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Mage"],
+    "Night Elf": ["Warrior", "Hunter", "Rogue", "Priest", "Druid"],
+    "Gnome": ["Warrior", "Rogue", "Mage", "Warlock", "Hunter"],
+    "Orc": ["Warrior", "Hunter", "Rogue", "Shaman", "Warlock", "Mage"],
+    "Undead": ["Warrior", "Rogue", "Priest", "Mage", "Warlock", "Hunter"],
+    "Tauren": ["Warrior", "Hunter", "Shaman", "Druid", "Priest"],
+    "Troll": ["Warrior", "Hunter", "Rogue", "Priest", "Shaman", "Mage", "Warlock"],
+    "Goblin": ["Warrior", "Hunter", "Rogue", "Shaman", "Mage", "Warlock", "Priest"],
+    "High Elf": ["Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Mage"]
+}
+
 def validate_race(race: str) -> bool:
-    """Validate race is in the allowed list."""
     if race not in VALID_RACES:
-        raise ValidationError(f"Invalid race: {race}. Must be one of: {', '.join(VALID_RACES)}")
+        raise ValidationError(f"Invalid race: {race}")
     return True
 
 def validate_class(char_class: str) -> bool:
-    """Validate class is in the allowed list."""
-    # CLASS_DATA keys match VALID_CLASSES
-    if char_class not in CLASS_DATA:
-         raise ValidationError(f"Invalid class: {char_class}. Must be one of: {', '.join(VALID_CLASSES)}")
+    if char_class not in VALID_CLASSES:
+        raise ValidationError(f"Invalid class: {char_class}")
     return True
 
-def validate_roles(roles: List[str]) -> bool:
-    """Validate roles list (min 1, all valid)."""
-    if not roles:
-        raise ValidationError("At least one role must be selected.")
-    
+def validate_race_class(race: str, char_class: str) -> bool:
+    race_norm = next((r for r in VALID_RACES if r.lower() == race.lower()), None)
+    class_norm = next((c for c in VALID_CLASSES if c.lower() == char_class.lower()), None)
+
+    if not race_norm:
+        raise ValidationError(f"Invalid race: {race}")
+    if not class_norm:
+        raise ValidationError(f"Invalid class: {char_class}")
+
+    allowed_classes = ALLOWED_COMBINATIONS.get(race_norm, [])
+    if class_norm not in allowed_classes:
+        raise ValidationError(f"{race_norm} cannot be {class_norm}")
+    return True
+
+def validate_roles(roles_input: Union[str, List[str]]) -> bool:
+    if not roles_input:
+        raise ValidationError("At least one role must be selected")
+    if isinstance(roles_input, list):
+        roles = roles_input
+        if not roles:
+             raise ValidationError("At least one role must be selected")
+    else:
+        roles = [r.strip() for r in roles_input.split(",")]
+
     for role in roles:
         if role not in VALID_ROLES:
-            raise ValidationError(f"Invalid role: {role}. Must be one of: {', '.join(VALID_ROLES)}")
+            raise ValidationError(f"Invalid role: {role}")
     return True
 
-def validate_professions(professions: List[str]) -> bool:
-    """Validate professions list (all valid, can be empty).
+def validate_professions(prof_input: Union[str, List[str]]) -> bool:
+    if not prof_input: return True
+    if isinstance(prof_input, list):
+        profs = prof_input
+    else:
+        profs = [p.strip() for p in prof_input.split(",")]
 
-    Enforces World of Warcraft profession limits:
-    - Maximum 2 primary professions (gathering/crafting)
-    - Maximum 4 secondary professions (utility)
-
-    Per TECHNICAL.md:
-    Primary: Alchemy, Blacksmithing, Enchanting, Engineering,
-             Herbalism, Leatherworking, Mining, Skinning,
-             Tailoring, Jewelcrafting
-    Secondary: First Aid, Cooking, Fishing, Survival
-    """
-    # Define profession categories
-    PRIMARY_PROFESSIONS = {
-        "Alchemy", "Blacksmithing", "Enchanting", "Engineering",
-        "Herbalism", "Leatherworking", "Mining", "Skinning",
-        "Tailoring", "Jewelcrafting"
-    }
-
-    SECONDARY_PROFESSIONS = {
-        "First Aid", "Cooking", "Fishing", "Survival"
-    }
-
-    # Validate each profession exists
-    for prof in professions:
+    for prof in profs:
         if prof not in VALID_PROFESSIONS:
-            raise ValidationError(f"Invalid profession: {prof}. Must be one of: {', '.join(VALID_PROFESSIONS)}")
-
-    # Count professions by category
-    primary_count = sum(1 for p in professions if p in PRIMARY_PROFESSIONS)
-    secondary_count = sum(1 for p in professions if p in SECONDARY_PROFESSIONS)
-
-    # Enforce limits
+            raise ValidationError(f"Invalid profession: {prof}")
+    
+    primary_profs = {
+        "Alchemy", "Blacksmithing", "Enchanting", "Engineering", 
+        "Herbalism", "Leatherworking", "Mining", "Skinning", 
+        "Tailoring", "Jewelcrafting", "Inscription"
+    }
+    primary_count = sum(1 for p in profs if p in primary_profs)
     if primary_count > 2:
-        primary_selected = [p for p in professions if p in PRIMARY_PROFESSIONS]
-        raise ValidationError(
-            f"Cannot have more than 2 primary professions. "
-            f"Selected {primary_count}: {', '.join(primary_selected)}"
-        )
-
-    if secondary_count > 4:
-        secondary_selected = [p for p in professions if p in SECONDARY_PROFESSIONS]
-        raise ValidationError(
-            f"Cannot have more than 4 secondary professions. "
-            f"Selected {secondary_count}: {', '.join(secondary_selected)}"
-        )
-
+        raise ValidationError(f"Cannot have more than 2 primary professions. Found {primary_count}.")
     return True
 
 def validate_url(url: str) -> bool:
-    """Validate URL format (http/https)."""
-    if not url:
-        return True # Empty URL is often allowed as optional, or handled by default
-        
+    if not url: return True
     regex = re.compile(
-        r'^https?://' # http:// or https://
-        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|' # domain...
-        r'localhost|' # localhost...
-        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
-        r'(?::\d+)?' # optional port
+        r'^https?://'
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'
+        r'localhost|'
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
+        r'(?::\d+)?'
         r'(?:/?|[/?]\S+)$', re.IGNORECASE)
-    
     if not re.match(regex, url):
-        raise ValidationError(f"Invalid URL format: {url}")
+        raise ValidationError("Invalid URL format")
     return True
 
-def sanitize_input(text: str) -> str:
-    """
-    Sanitize input string.
-    
-    - Trims leading/trailing whitespace.
-    - Preserves apostrophes (O'Brien).
-    - Prevents basic injection/formatting issues (implementation details depend on threat model).
-    
-    For this context, we mainly ensure it's a clean string.
-    """
-    if not text:
-        return ""
-    
-    # Strip whitespace
-    sanitized = str(text).strip()
-    
-    # Additional sanitization can be added here if needed (e.g. escaping HTML/Markdown)
-    
-    return sanitized
-
-
 def validate_talents(char_class: str, level: int, talents: Dict[str, int]) -> bool:
-    """
-    Validate selected talents based on class and level.
-    talents: A dictionary of {talent_name: ranks_spent}
-    """
     if char_class not in TALENT_DATA:
         raise ValidationError(f"Invalid class for talent validation: {char_class}")
 
     class_talent_trees = TALENT_DATA[char_class]
-    
-    talents_chosen_info = {} # To store full info of chosen talents
+    talents_chosen_info = {}
     points_spent_per_tree = {tree_name: 0 for tree_name in class_talent_trees.keys()}
     total_talent_points_spent = 0
 
@@ -194,17 +134,13 @@ def validate_talents(char_class: str, level: int, talents: Dict[str, int]) -> bo
                 talent_info = tree_talents[talent_name]
                 found_talent = True
                 
-                # Validate ranks spent
                 if ranks_spent <= 0:
                     raise ValidationError(f"Ranks spent for talent '{talent_name}' must be positive.")
                 if ranks_spent > talent_info["max_rank"]:
                     raise ValidationError(f"Talent '{talent_name}' has max rank {talent_info['max_rank']}, but {ranks_spent} ranks were specified.")
-                
-                # Validate implied character level for the talent
                 if level < talent_info["level"]:
                     raise ValidationError(f"Talent '{talent_name}' requires character level {talent_info['level']}, but character is level {level}.")
                 
-                # Store full talent info and add to points spent in this tree
                 talents_chosen_info[talent_name] = talent_info
                 points_spent_per_tree[tree_name] += ranks_spent
                 total_talent_points_spent += ranks_spent
@@ -213,30 +149,22 @@ def validate_talents(char_class: str, level: int, talents: Dict[str, int]) -> bo
         if not found_talent:
             raise ValidationError(f"Talent '{talent_name}' is not a valid talent for class '{char_class}'.")
 
-    # --- Second Pass: Validate Total Talent Points, Tier Unlocks, and Prerequisites ---
-
-    # 1. Validate Total Talent Points Spent
-    total_talent_points_available = max(0, level - 9) # First point at level 10
+    total_talent_points_available = max(0, level - 9)
     if total_talent_points_spent > total_talent_points_available:
         raise ValidationError(f"Character level {level} can only have {total_talent_points_available} talent points, but {total_talent_points_spent} were spent.")
     
     for talent_name, talent_info in talents_chosen_info.items():
         tree_name = None
-        # Find the tree this talent belongs to
         for t_name, t_talents in class_talent_trees.items():
             if talent_name in t_talents:
                 tree_name = t_name
                 break
-        if not tree_name: # Should not happen if found_talent was true in first pass
-            continue
+        if not tree_name: continue
         
-        # 2. Validate Tier Unlocks (points_in_tree_required)
-        # points_in_tree_required is (tier - 1) * 5
         required_points_for_tier = (talent_info['tier'] - 1) * 5
         if points_spent_per_tree[tree_name] < required_points_for_tier:
             raise ValidationError(f"Talent '{talent_name}' (Tier {talent_info['tier']}) requires {required_points_for_tier} points spent in {tree_name} tree, but only {points_spent_per_tree[tree_name]} were spent.")
 
-        # 3. Validate Prerequisites (requires)
         for prereq in talent_info.get("requires", []):
             prereq_name = prereq["talent"]
             prereq_ranks_needed = prereq["ranks"]
@@ -248,3 +176,9 @@ def validate_talents(char_class: str, level: int, talents: Dict[str, int]) -> bo
                 raise ValidationError(f"Talent '{talent_name}' requires prerequisite talent '{prereq_name}' with at least {prereq_ranks_needed} ranks, but only {talents[prereq_name]} ranks were spent.")
 
     return True
+
+def sanitize_input(text: str) -> str:
+    if not isinstance(text, str):
+        return str(text)
+    sanitized_text = text.replace('\n', ' ').replace('\r', '')
+    return sanitized_text

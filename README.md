@@ -4,7 +4,7 @@
 [![Discord](https://img.shields.io/badge/Discord-Classic%2B-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/fJDzq5rfAK)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Version](https://img.shields.io/badge/Version-2.0.0-gold?style=for-the-badge)](./docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.2.6-blue?style=for-the-badge)](./docs/CHANGELOG.md)
 
 **Greetings, traveler.**
 
@@ -14,7 +14,7 @@ Forged in the fires of Python and tempered by the strict laws of World of Warcra
 
 ---
 
-## ✨ Features (v2.0)
+## ✨ Features (v1.2 "Reformation")
 
 ### 🖋️ The Sacred Ritual of Registration
 Forget boring forms. New members are greeted by *Chronicler Thaldrin* for a cinematic, 12-step interactive interview.
@@ -31,7 +31,7 @@ A robust banking system tracking every copper and linen cloth.
 ### ⚔️ Talent System & Validation
 Ensure your build is battle-ready and legal.
 - **Talent Audit:** Validate your build code against Classic+ rules with `/talent audit`.
-- **Dynamic Library:** Talents are loaded from a Google Sheet for easy updates.
+- **Dynamic Library:** Talents are loaded dynamically for easy updates.
 
 ### ⚰️ The Rite of Remembrance
 Death is part of the journey. When a hero falls, officers perform the **Burial Rite**.
@@ -39,10 +39,13 @@ Death is part of the journey. When a hero falls, officers perform the **Burial R
 - **The Cemetery:** Automatically moves character records to the `#cemetery` channel.
 
 ### ⚡ The Arcane Link (PostgreSQL + MCP)
-Built on a **hybrid architecture**:
+
+Built on a robust, event-driven hybrid architecture:
+
 - **PostgreSQL Database:** Primary source of truth for characters, guild bank, and talents.
+- **Zero Polling:** Changes in our database reflect instantly in Discord via webhooks.
 - **MCP Integration:** External server enables AI-powered workflows via LLM agents.
-- **Webhooks:** Real-time event handling and automation.
+- **Reliable Automation:** Powered by FastAPI webhooks for seamless, real-time integration.
 
 ---
 
@@ -50,7 +53,8 @@ Built on a **hybrid architecture**:
 
 The Chronicler is built with modern, production-grade standards.
 
-- **Stack:** Python 3.11, `discord.py`, `aiohttp`, FastAPI, PostgreSQL
+- **Stack:** Python 3.11, `discord.py`, `aiohttp`, `FastAPI`
+- **Database:** PostgreSQL (Supabase)
 - **Architecture:** Hybrid (Discord Bot + External MCP Server)
 - **External Dependency:** [discord-guildmaster-mcp](https://github.com/pkochanowicz/discord-guildmaster-mcp)
 - **Deployment:** Fly.io ready
@@ -81,8 +85,8 @@ The Chronicler is built with modern, production-grade standards.
 
 - [**User Guide**](./docs/USER_GUIDE.md) - *For the heroes of the guild.*
 - [**Technical Manual**](./docs/TECHNICAL.md) - *For the goblins and gnomes engineering the backend.*
-- [**Deployment Guide**](./docs/DEPLOYMENT_GUIDE.md) - *Instructions for hosting.*
-- [**Master Blueprint v2.0**](./docs/MASTER_BLUEPRINT_V2.md) - *The architectural vision.*
+- [**Deployment Guide**](./docs/DEPLOYMENT_GUIDE.md) - *Instructions for hosting on Fly.io.*
+- [**Test Suite**](./docs/TEST_SUITE.md) - *Protocols for quality assurance.*
 
 ---
 

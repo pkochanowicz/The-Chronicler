@@ -1,51 +1,72 @@
 # Azeroth Bound Bot - Technical Documentation
 
-**Version:** 2.0.0 (Schema Reformation & Ascension)
-**Architecture:** Hybrid (Discord Bot + External MCP Server)
-**Last Updated:** December 23, 2025
+**Version:** 1.2.0 (Schema Reformation & Ascension)
+**Architecture:** Path B (Webhook-Driven)
+**Last Updated:** December 21, 2025
 
 ---
 
 ## 1. Architecture Overview
 
-The Azeroth Bound Bot ("The Chronicler") uses a **hybrid architecture**:
+The Azeroth Bound Bot ("The Chronicler") uses a **robust, event-driven architecture**:
 - **Discord Bot (Python):** Handles user interactions, interactive flows, and immediate feedback.
-- **PostgreSQL Database:** Acts as the primary database (Source of Truth), managed via `Alembic` migrations.
-- **External MCP Server:** Provides an API layer for LLM agents to interact with the bot.
+- **Supabase PostgreSQL:** Acts as the primary database (Source of Truth).
+- **FastAPI Gateway:** A production-grade web service handling webhooks, health checks, and acting as the bridge between database events and Discord.
+- **MCP Platform:** A separate development/testing environment for LLM-driven features and complex operations.
 
 ---
 
-## 2. Data Schemas
+## 2. Data Schemas (PostgreSQL)
 
-Character, Guild Bank, and Talent data are stored in a PostgreSQL database. The schema is defined in `schemas/db_schemas.py` and managed with Alembic migrations.
+### `characters` Table
+The definitive record for all guild members.
+*Key Columns:*
+- `id` (UUID): Primary Key.
+- `discord_id` (BigInt): Link to Discord user.
+- `name` (Text): Character name (Unique).
+- `status` (Enum): `PENDING`, `REGISTERED`, `DECEASED`, `BURIED`.
+- `attributes` (JSONB): Flexible storage for `race`, `class`, `roles`, `professions`.
+- `biography` (JSONB): Stores `backstory`, `personality`, `quotes`, `traits`.
+- `talents` (JSONB): Full talent build data.
+- `meta` (JSONB): `portrait_url`, `forum_post_id`, `recruitment_msg_id`.
 
-Please refer to `docs/architecture_UI_UX.md` for the canonical schema definition.
+### `guild_bank` Table
+Tracks every item and transaction.
+*Key Columns:*
+- `id` (UUID): Transaction ID.
+- `item_name` (Text): Name of the item.
+- `quantity` (Integer): Amount.
+- `depositor_id` (BigInt): Discord ID of depositor.
+- `status` (Enum): `AVAILABLE`, `WITHDRAWN`.
+- `transaction_history` (JSONB): Audit log of ownership.
+
+### `talent_library` Table
+Static data for validation, populated via scraping.
+*Key Columns:*
+- `id` (Text): Unique slug (e.g., `warrior_arms_mortalstrike`).
+- `tree` (Text): Talent tree name.
+- `max_rank` (Int): Validation rule.
+- `prerequisites` (JSONB): Dependency logic.
 
 ---
 
 ## 3. Core Services
 
-### Database Service (`db/database.py`)
-Manages all PostgreSQL interactions via SQLAlchemy.
+### CharacterService (`services/character_service.py`)
+The primary interface for character logic.
+- **Backend:** Uses `CharacterRepository` (SQLAlchemy) to interact with Supabase.
+- **Methods:** `create_character`, `get_by_discord_id`, `update_status`, `bury`.
+- **Validation:** Enforces Pydantic models before DB writes.
 
 ### GuildBankService (`services/bank_service.py`)
-Manages banking logic against the database.
-- **Methods:** `deposit_item`, `withdraw_item`, `get_member_deposits`.
-- **Logic:** Tracks item ownership and transaction history.
+Manages banking transactions.
+- **Backend:** Uses `BankRepository` (SQLAlchemy).
+- **Logic:** Ensures atomic transactions for deposits and withdrawals.
 
-### External MCP Server
-Exposes bot functionality to LLMs via an external REST API.
-- **Repository:** [discord-guildmaster-mcp](https://github.com/pkochanowicz/discord-guildmaster-mcp)
-- **Functionality:** `get_character_sheet`, `send_discord_message`, workflow triggers.
-- **Security:** API Key authentication.
-- **Integration:** See `integrations/mcp_client.py` for workflow triggers.
-
-### Image Storage Service (`services/image_storage.py`)
-Manages permanent image hosting via Cloudflare R2.
-- **Backend:** S3-compatible R2 bucket
-- **Free Tier:** 10GB storage, unlimited egress
-- **Methods:** `upload`, `delete`, `upload_with_fallback`
-- **Fallback:** Gracefully degrades to DEFAULT_PORTRAIT_URL on errors
+### Chronicler Gateway (`main.py`)
+The FastAPI application entry point.
+- **Routes:** `/webhooks/discord`, `/health`.
+- **Lifespan:** Manages database connection pools and bot startup/shutdown.
 
 ---
 
@@ -53,22 +74,28 @@ Manages permanent image hosting via Cloudflare R2.
 
 ### /register_character
 12-step flow using Discord Modals and Buttons.
-- **Image Upload:** Users upload images directly; stored on Cloudflare R2 (permanent CDN URLs).
-- **Validation:** Checks race/class combos via `domain/validators.py`.
-- **Implementation:** See `flows/registration_flow.py` and `services/image_storage.py`.
+- **State Management:** Temporary state stored in memory (Redis planned).
+- **Finalization:** Calls `CharacterService.create_character` to persist to PostgreSQL.
+- **Image Upload:** Uploads to Discord CDN, URL stored in `characters` table.
+
+### /bury
+Ceremonial flow for handling character death.
+- **Logic:** Updates `status` to `DECEASED`.
+- **Trigger:** Database update fires event -> Gateway posts to `#cemetery`.
 
 ### /talent audit
-Validates a JSON talent build against the `talents` and `talent_trees` tables in the database.
-- Checks: Max rank, Level requirement, Tier prerequisites, Talent dependencies.
+Validates a JSON talent build against the `talent_library` table.
+- **Logic:** Recursive check of prerequisites and point limits.
 
 ---
 
 ## 5. Deployment
 
-Deployed on **Fly.io**.
+Deployed on **Fly.io** with high availability.
 - **Config:** `fly.toml`
-- **Secrets:** Managed via `flyctl secrets` (Discord Token, Database URL, Webhook Secret, MCP Key).
-- **Process:** `python main.py` runs the Bot and a Webhook listener. The MCP Server is a separate deployment.
+- **Secrets:** `DISCORD_TOKEN`, `DATABASE_URL` (Supabase), `WEBHOOK_SECRET`.
+- **Process:** Single container running FastAPI (`uvicorn`) + Discord Bot (`asyncio.create_task`).
+- **Restart Policy:** `always` (ensures bot survives transient failures).
 
 ---
 

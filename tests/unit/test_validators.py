@@ -69,7 +69,7 @@ class TestValidators:
     def test_validate_roles_valid_multiple(self):
         """Test valid multiple role selection."""
         assert validate_roles(["Tank", "Melee DPS"]) is True
-        assert validate_roles(["Healer", "Support", "Ranged DPS"]) is True
+        assert validate_roles(["Healer", "Ranged DPS"]) is True
 
     def test_validate_roles_invalid_empty(self):
         """Test that empty role selection is rejected (min 1)."""
@@ -89,6 +89,7 @@ class TestValidators:
         """Test valid profession selection."""
         assert validate_professions(["Mining", "Blacksmithing"]) is True
         assert validate_professions(["Cooking", "Fishing", "First Aid"]) is True
+        assert validate_professions(["Survival"]) is True
 
     def test_validate_professions_invalid_option(self):
         """Test that invalid profession options are rejected."""
@@ -171,7 +172,7 @@ class TestValidators:
         primary_professions = {
             "Alchemy", "Blacksmithing", "Enchanting", "Engineering",
             "Herbalism", "Leatherworking", "Mining", "Skinning",
-            "Tailoring", "Jewelcrafting"
+            "Tailoring", "Jewelcrafting", "Inscription"
         }
 
         secondary_professions = {
