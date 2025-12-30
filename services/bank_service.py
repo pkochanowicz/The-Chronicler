@@ -1,6 +1,6 @@
 # services/bank_service.py
 import logging
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Any
 from datetime import datetime, timezone
 import uuid
 from services.sheets_service import google_sheets_service

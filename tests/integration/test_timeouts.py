@@ -23,7 +23,7 @@ Default timeout: 300 seconds (configurable via INTERACTIVE_TIMEOUT_SECONDS).
 
 import pytest
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 
 class TestInteractiveFlowTimeouts:

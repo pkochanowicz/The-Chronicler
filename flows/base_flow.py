@@ -18,7 +18,6 @@
 Base Interactive Flow
 Common logic for multi-step interactive commands.
 """
-import asyncio
 import discord
 from config.settings import settings
 

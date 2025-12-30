@@ -17,7 +17,7 @@
 """
 Validators for domain models and fields.
 """
-from typing import List, Optional, Dict
+from typing import List, Dict
 import re
 from domain.models import CLASS_DATA
 from domain.talent_data import TALENT_DATA

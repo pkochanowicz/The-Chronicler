@@ -61,6 +61,7 @@ coverage.xml
 htmlcov/
 
 # Test files
+test_results.txt
 sanity_check.py
 .gemini/
 .claude/

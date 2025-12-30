@@ -21,7 +21,6 @@ Configures the Discord bot client.
 import logging
 import discord
 from discord.ext import commands
-from config.settings import settings
 
 logger = logging.getLogger(__name__)
 

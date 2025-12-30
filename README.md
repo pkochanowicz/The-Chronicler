@@ -19,7 +19,7 @@ Forged in the fires of Python and tempered by the strict laws of World of Warcra
 ### 🖋️ The Sacred Ritual of Registration
 Forget boring forms. New members are greeted by *Chronicler Thaldrin* for a cinematic, 12-step interactive interview.
 - **Immersive Dialogue:** Every step is narrated in-character.
-- **Direct Image Uploads:** Upload your portrait directly to Discord storage.
+- **Direct Image Uploads:** Upload your portrait directly; stored securely on Cloudflare R2.
 - **Strict Validation:** Enforces lore-accurate Race/Class/Role combinations.
 
 ### 🏦 The Guild Bank
@@ -38,10 +38,11 @@ Death is part of the journey. When a hero falls, officers perform the **Burial R
 - **Ceremonial Workflow:** A solemn interactive process to record the cause of death.
 - **The Cemetery:** Automatically moves character records to the `#cemetery` channel.
 
-### ⚡ The Arcane Link (Webhooks)
-Built on the **Path B Architecture**:
-- **Zero Polling:** Changes in our Master Google Sheet reflect instantly in Discord.
-- **Single Source of Truth:** Your spreadsheet is the database. The bot is the interface.
+### ⚡ The Arcane Link (PostgreSQL + MCP)
+Built on a **hybrid architecture**:
+- **PostgreSQL Database:** Primary source of truth for characters, guild bank, and talents.
+- **MCP Integration:** External server enables AI-powered workflows via LLM agents.
+- **Webhooks:** Real-time event handling and automation.
 
 ---
 

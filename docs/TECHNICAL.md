@@ -36,9 +36,16 @@ Manages banking logic against the database.
 ### External MCP Server
 Exposes bot functionality to LLMs via an external REST API.
 - **Repository:** [discord-guildmaster-mcp](https://github.com/pkochanowicz/discord-guildmaster-mcp)
-- **Functionality:** `get_character_sheet`, `post_image_to_graphics_storage`, `send_discord_message`.
+- **Functionality:** `get_character_sheet`, `send_discord_message`, workflow triggers.
 - **Security:** API Key authentication.
-- **Graphics:** Handles image uploads to `#graphics-storage` and returns CDN URLs.
+- **Integration:** See `integrations/mcp_client.py` for workflow triggers.
+
+### Image Storage Service (`services/image_storage.py`)
+Manages permanent image hosting via Cloudflare R2.
+- **Backend:** S3-compatible R2 bucket
+- **Free Tier:** 10GB storage, unlimited egress
+- **Methods:** `upload`, `delete`, `upload_with_fallback`
+- **Fallback:** Gracefully degrades to DEFAULT_PORTRAIT_URL on errors
 
 ---
 
@@ -46,8 +53,9 @@ Exposes bot functionality to LLMs via an external REST API.
 
 ### /register_character
 12-step flow using Discord Modals and Buttons.
-- **Image Upload:** Users upload images directly; bot hosts them on `#graphics-storage`.
+- **Image Upload:** Users upload images directly; stored on Cloudflare R2 (permanent CDN URLs).
 - **Validation:** Checks race/class combos via `domain/validators.py`.
+- **Implementation:** See `flows/registration_flow.py` and `services/image_storage.py`.
 
 ### /talent audit
 Validates a JSON talent build against the `talents` and `talent_trees` tables in the database.

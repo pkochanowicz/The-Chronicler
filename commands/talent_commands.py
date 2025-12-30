@@ -1,7 +1,9 @@
 # commands/talent_commands.py
+import json
 import discord
 from discord import app_commands
 from services.sheets_service import google_sheets_service
+from domain.validators import validate_talents, ValidationError
 
 # Instantiate the service
 sheets_service = google_sheets_service

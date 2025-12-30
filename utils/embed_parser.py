@@ -20,7 +20,7 @@ Utilities for parsing and creating Discord embeds from JSON data.
 """
 import json
 import logging
-from typing import List, Optional
+from typing import List
 import discord
 from domain.models import Character, get_class_emoji, get_class_color
 

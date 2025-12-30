@@ -100,6 +100,13 @@ class Settings:
             "https://i.imgur.com/default_placeholder.png"
         )
 
+        # Cloudflare R2 Image Storage
+        self.R2_ACCOUNT_ID: str = os.getenv("R2_ACCOUNT_ID", "")
+        self.R2_ACCESS_KEY_ID: str = os.getenv("R2_ACCESS_KEY_ID", "")
+        self.R2_SECRET_ACCESS_KEY: str = os.getenv("R2_SECRET_ACCESS_KEY", "")
+        self.R2_BUCKET_NAME: str = os.getenv("R2_BUCKET_NAME", "azeroth-bound-images")
+        self.R2_PUBLIC_URL: str = os.getenv("R2_PUBLIC_URL", "")
+
         # Reaction Emojis (constants, not configurable)
         self.APPROVE_EMOJI: str = "✅"
         self.REJECT_EMOJI: str = "❌"
@@ -210,13 +217,14 @@ class Settings:
     def _validate_configuration(self):
         """
         Validate all critical configuration.
-        
+
         Raises:
             ValueError: If any required configuration is missing or invalid
         """
         self._validate_required_fields()
         self._validate_webhook_secret()
         self._validate_guild_roles()
+        self._validate_r2_config()
 
     def _validate_required_fields(self):
         """Validate that all required fields are present."""
@@ -268,6 +276,30 @@ class Settings:
         ]
 
         logger.info(f"✅ Guild roles configured: {', '.join(configured_roles)}")
+
+    def _validate_r2_config(self):
+        """
+        Validate Cloudflare R2 configuration for image storage.
+
+        Logs warning if incomplete (gracefully degrades to DEFAULT_PORTRAIT_URL).
+        """
+        r2_fields = {
+            "R2_ACCOUNT_ID": self.R2_ACCOUNT_ID,
+            "R2_ACCESS_KEY_ID": self.R2_ACCESS_KEY_ID,
+            "R2_SECRET_ACCESS_KEY": self.R2_SECRET_ACCESS_KEY,
+            "R2_PUBLIC_URL": self.R2_PUBLIC_URL
+        }
+
+        missing = [name for name, value in r2_fields.items() if not value]
+
+        if missing:
+            logger.warning(
+                f"⚠️  R2 image storage not configured (missing: {', '.join(missing)}). "
+                f"Image uploads will fallback to DEFAULT_PORTRAIT_URL. "
+                f"See docs/IMAGE_STORAGE.md for setup instructions."
+            )
+        else:
+            logger.info(f"✅ Cloudflare R2 configured: bucket '{self.R2_BUCKET_NAME}'")
 
 
 # Singleton instance for convenient importing

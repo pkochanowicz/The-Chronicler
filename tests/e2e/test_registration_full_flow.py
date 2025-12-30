@@ -22,7 +22,7 @@ All external services (Discord, Google Sheets) are mocked for local testing.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock
 import asyncio
 
 
@@ -92,7 +92,6 @@ class TestRegistrationFullFlow:
         mock_bot = MagicMock()
         mock_recruitment_channel = AsyncMock()
         mock_vault_forum = AsyncMock()
-        mock_dm_channel = AsyncMock()
 
         mock_bot.get_channel = MagicMock(side_effect=lambda id: {
             111: mock_recruitment_channel,  # RECRUITMENT_CHANNEL_ID
@@ -113,11 +112,7 @@ class TestRegistrationFullFlow:
         # Step 4: Verify data written to sheets
         # (Tested separately in test_sheets_service.py)
 
-        # Step 5: Simulate webhook trigger
-        webhook_payload = {
-            "trigger": "POST_TO_RECRUITMENT",
-            "character": mock_complete_character_data
-        }
+        # Step 5: Simulate webhook trigger (tested separately)
 
         # Step 6: Verify recruitment post created
         # Mock recruitment message
@@ -186,7 +181,6 @@ class TestRegistrationFullFlow:
         # - User receives appropriate DM with reason
         # - Sheet updated with reviewed_by officer ID
 
-        mock_bot = MagicMock()
         mock_user = AsyncMock()
         mock_user.send = AsyncMock()
 

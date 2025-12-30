@@ -18,7 +18,6 @@
 Azeroth Bound Bot - Entry Point
 Main entry point for the Discord bot.
 """
-import asyncio
 import logging
 from config.settings import settings
 from services.discord_client import bot

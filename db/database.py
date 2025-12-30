@@ -39,5 +39,4 @@ async def init_db():
     engine, _ = get_engine_and_session_maker()
     async with engine.begin() as conn:
         # Import all models to ensure they are registered
-        import schemas.db_schemas 
         await conn.run_sync(Base.metadata.create_all)
