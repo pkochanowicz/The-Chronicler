@@ -35,7 +35,7 @@ class TestInteractiveFlowTimeouts:
     """
 
     @pytest.mark.asyncio
-    async def test_registration_flow_timeout(self, mock_discord_interaction):
+    async def test_registration_flow_timeout(self, mock_interaction):
         """
         User Story: Guild member starts character registration but goes AFK before completing.
 
@@ -55,7 +55,7 @@ class TestInteractiveFlowTimeouts:
         # For now, document what SHOULD happen
 
         # Mock interaction with short timeout for testing
-        mock_discord_interaction.followup = AsyncMock()
+        mock_interaction.followup = AsyncMock()
 
         # Simulate waiting for user input that never comes
         # In real flow: await bot.wait_for('message', timeout=300)
@@ -65,7 +65,7 @@ class TestInteractiveFlowTimeouts:
             # Simulate waiting for user response with 0.1s timeout
             await asyncio.wait_for(
                 asyncio.sleep(10),  # User never responds
-                timeout=0.1
+                timeout=0.1,
             )
 
         # When RegistrationFlow is implemented, verify:
@@ -78,7 +78,7 @@ class TestInteractiveFlowTimeouts:
         assert True, "TimeoutError mechanism verified"
 
     @pytest.mark.asyncio
-    async def test_burial_flow_timeout(self, mock_discord_interaction):
+    async def test_burial_flow_timeout(self, mock_interaction):
         """
         User Story: Officer starts burial ceremony but gets interrupted mid-process.
 
@@ -102,18 +102,15 @@ class TestInteractiveFlowTimeouts:
         # 5. Verify no partial status changes written to sheets
         # 6. Character remains in DECEASED state (not changed to BURIED)
 
-        mock_discord_interaction.followup = AsyncMock()
+        mock_interaction.followup = AsyncMock()
 
         with pytest.raises(asyncio.TimeoutError):
-            await asyncio.wait_for(
-                asyncio.sleep(10),
-                timeout=0.1
-            )
+            await asyncio.wait_for(asyncio.sleep(10), timeout=0.1)
 
         assert True, "Burial flow timeout mechanism verified"
 
     @pytest.mark.asyncio
-    async def test_timeout_sends_user_message(self, mock_discord_interaction):
+    async def test_timeout_sends_user_message(self, mock_interaction):
         """
         User Story: User experiences timeout and needs to understand what happened and next steps.
 
@@ -138,7 +135,7 @@ class TestInteractiveFlowTimeouts:
             "session expired",
             "inactivity",
             "try again",
-            "Chronicler"
+            "Chronicler",
         ]
 
         assert len(expected_message_elements) == 4
@@ -164,7 +161,7 @@ class TestInteractiveFlowTimeouts:
         from config.settings import Settings
 
         settings = Settings()
-        assert hasattr(settings, 'INTERACTIVE_TIMEOUT_SECONDS')
+        assert hasattr(settings, "INTERACTIVE_TIMEOUT_SECONDS")
 
         # Default should be 300 seconds (5 minutes) in production
         # Can be overridden in tests via environment variable
@@ -174,7 +171,7 @@ class TestInteractiveFlowTimeouts:
         # This allows different timeouts for test vs production environments
 
     @pytest.mark.asyncio
-    async def test_no_hanging_processes_after_timeout(self, mock_discord_interaction):
+    async def test_no_hanging_processes_after_timeout(self, mock_interaction):
         """
         User Story: Bot operator needs to ensure bot doesn't leak memory from abandoned flows.
 
@@ -197,7 +194,7 @@ class TestInteractiveFlowTimeouts:
         # 4. No event listeners left registered
         # 5. Memory freed (flow object can be garbage collected)
 
-        mock_discord_interaction.followup = AsyncMock()
+        mock_interaction.followup = AsyncMock()
 
         try:
             await asyncio.wait_for(asyncio.sleep(10), timeout=0.1)

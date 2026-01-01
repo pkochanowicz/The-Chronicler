@@ -41,7 +41,7 @@ The Chronicler is a **production-ready Discord bot** serving the Azeroth Bound W
 
 **Registration Flow** (`flows/registration_flow.py`):
 - 12-step modal-based character creation
-- Direct image upload via `msg.attachments[0].url` ⚠️ (Line 127)
+- Image upload to Cloudflare R2 via `services/image_storage.py`
 - Race/class/profession validation
 - Stores to PostgreSQL
 
@@ -91,9 +91,9 @@ The `items`, `npcs`, `quests`, `spells`, `factions` tables suggest **full Turtle
 
 | Service | Purpose | Evidence |
 |---------|---------|----------|
-| **Google Sheets API** | Character data backup, talent library | `config/settings.py:42-43` |
-| **Discord CDN** | Image hosting (current) | `flows/registration_flow.py:127` |
-| **External MCP Server** | AI agent API layer | `docs/MCP_DISCORD_TECHNICAL.md` |
+| **Cloudflare R2** | Image hosting (production) | `services/image_storage.py`, `docs/IMAGE_STORAGE.md` |
+| **External MCP Server** | AI agent API layer | `docs/MCP_DISCORD_TECHNICAL.md`, `integrations/mcp_client.py` |
+| **PostgreSQL (Supabase)** | Primary database | `schemas/db_schemas.py`, `alembic/` |
 
 ### 3.2 Environment Variables
 
@@ -104,16 +104,17 @@ GUILD_ID
 FORUM_CHANNEL_ID
 RECRUITMENT_CHANNEL_ID
 CEMETERY_CHANNEL_ID
-GRAPHICS_STORAGE_CHANNEL_ID  # For image uploads
 
-# Google Services
-GOOGLE_CREDENTIALS_B64
-GOOGLE_SHEET_ID
-BACKUP_FOLDER_ID
+# Cloudflare R2 (Image Storage)
+R2_ACCOUNT_ID
+R2_ACCESS_KEY_ID
+R2_SECRET_ACCESS_KEY
+R2_BUCKET_NAME
+R2_PUBLIC_URL
 
 # MCP Integration
+MCP_SERVER_URL
 MCP_API_KEY
-MCP_PORT (default: 8081)
 
 # Role IDs
 PATHFINDER_ROLE_ID
@@ -141,8 +142,8 @@ The Chronicler uses **external MCP server** architecture:
 - **Communication:** REST API with API key authentication
 - **Functions Exposed:**
   - `get_character_sheet`
-  - `post_image_to_graphics_storage`
   - `send_discord_message`
+  - `trigger_workflow` (via integrations/mcp_client.py)
 
 ### 4.2 MCP Overlap Assessment
 
@@ -155,70 +156,71 @@ The Chronicler (hosted bot) and MCP server (local tool server) have **complement
 | Discord Gateway Events | ✅ Handles | ❌ No access |
 | Slash Commands | ✅ Handles | ❌ No access |
 | Database Operations | ✅ Direct access | ❌ No database |
-| Image Uploads | ✅ To #graphics-storage | ✅ Via API |
-| AI Agent Workflows | ❌ Triggers only | ✅ Executes |
+| Image Uploads | ✅ To Cloudflare R2 | ❌ N/A |
+| AI Agent Workflows | ✅ Triggers via mcp_client | ✅ Executes |
 
 **Recommended Integration Pattern:**
 - Chronicler: Discord Gateway events → Trigger workflows
 - MCP Server: Execute AI-powered workflows → Return results
 - Communication: Webhooks or scheduled jobs (not yet implemented)
 
-**Missing Component:** `chronicler/integrations/mcp_client.py` does not exist yet.
+**Implementation:** `integrations/mcp_client.py` provides workflow trigger methods.
 
 ---
 
-## 5. Image Hosting — CRITICAL FINDING
+## 5. Image Hosting — ✅ IMPLEMENTED
 
 ### 5.1 Current Implementation
 
-**Location:** `flows/registration_flow.py:127`
+**Solution:** Cloudflare R2 (S3-compatible object storage)
+**Location:** `services/image_storage.py`
+**Documentation:** `docs/IMAGE_STORAGE.md`
+
+**Architecture:**
+- Images uploaded to Cloudflare R2 bucket during registration
+- Permanent CDN URLs returned (format: `https://pub-{hash}.r2.dev/{key}`)
+- Graceful fallback to `DEFAULT_PORTRAIT_URL` on failure
+- Async upload with boto3 S3 client
+
+**Free Tier Benefits:**
+- 10 GB/month storage (永久免費)
+- Unlimited egress (zero fees)
+- 1M write operations/month
+- 10M read operations/month
+
+### 5.2 Implementation Details
+
+**Upload Flow:**
 ```python
-if attachment.content_type and attachment.content_type.startswith('image/'):
-    self.data["portrait_url"] = attachment.url  # ⚠️ EPHEMERAL URL
+# Registration flow uploads to R2
+storage = get_image_storage()
+result = await storage.upload_with_fallback(
+    image_bytes=image_bytes,
+    filename=attachment.filename,
+    metadata={"context": "portraits", "uploader_id": user_id}
+)
+self.data["portrait_url"] = result.url  # Permanent CDN URL
 ```
 
-**Problem:**
-- Discord attachment URLs are **CDN links** that may expire
-- URLs can change/break after hours/days
-- No permanent storage solution
-
-**Evidence of Awareness:**
-- `GRAPHICS_STORAGE_CHANNEL_ID` env var exists (line 42 of settings.py)
-- `images` table in database schema suggests future image management
-- `DEFAULT_PORTRAIT_URL` fallback exists
-
-### 5.2 Recommended Solution
-
-**Option A: Discord Channel as Storage (Current Pattern)**
-- Upload to `#graphics-storage` channel
-- Store message ID + channel ID in database
-- Reconstruct permanent URL: `https://cdn.discordapp.com/attachments/{channel_id}/{attachment_id}/{filename}`
-- **Pros:** No external service, already configured
-- **Cons:** Discord rate limits, 25MB file limit
-
-**Option B: Cloudflare R2 (Production-Grade)**
-- S3-compatible, 10GB free tier, zero egress fees
-- Permanent URLs, CDN acceleration
-- **Pros:** Production-ready, cost-effective
-- **Cons:** Requires Cloudflare account setup
-
-**Priority:** Implement Option A (Discord storage) immediately, migrate to Option B later if needed.
+**Configuration Required:**
+- R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+- R2_BUCKET_NAME, R2_PUBLIC_URL
 
 ---
 
 ## 6. Known Issues & Tech Debt
 
 ### 6.1 Immediate Concerns
-1. **Image URLs are ephemeral** — registration flow stores Discord attachment URLs
-2. **Database scope unclear** — Are `items`, `npcs`, `quests` tables populated?
-3. **MCP integration incomplete** — No client code exists yet
+1. ✅ **Image storage resolved** — Cloudflare R2 implemented
+2. **Database scope unclear** — Are `items`, `npcs`, `quests` tables populated? (See `docs/DATA_ARCHITECTURE_DECISION.md`)
+3. ✅ **MCP integration implemented** — Client code in `integrations/mcp_client.py`
 
 ### 6.2 Code Quality Observations
 - ✅ Excellent test coverage (unit, integration, e2e)
 - ✅ Type hints throughout codebase
 - ✅ Proper separation of concerns (flows, commands, services, domain)
 - ✅ Alembic migrations for schema management
-- ⚠️ Guild bank service uses Google Sheets (legacy from v1.0?)
+- ✅ Production-grade image storage (Cloudflare R2)
 
 ---
 
@@ -231,8 +233,8 @@ if attachment.content_type and attachment.content_type.startswith('image/'):
 - **Secrets Management:** `flyctl secrets`
 
 ### 7.2 External Services
-- **MCP Server:** Separate deployment (local or hosted)
-- **Google Sheets:** Backup/sync for character data
+- **MCP Server:** Separate deployment ([discord-guildmaster-mcp](https://github.com/pkochanowicz/discord-guildmaster-mcp))
+- **Cloudflare R2:** Image hosting and CDN
 
 ---
 
@@ -275,20 +277,22 @@ the_chronicler/
 
 ## 9. Recommendations for Next Session
 
-### Priority 1: Foundation
-- [ ] Implement permanent image storage (Discord channel method)
-- [ ] Investigate pfUI-turtle data sources (Lua → Python parser or API)
-- [ ] Document database scope decisions
+### Priority 1: Data Architecture
+- [x] Implement permanent image storage (Cloudflare R2)
+- [x] Document database scope decisions (`docs/DATA_ARCHITECTURE_DECISION.md`)
+- [ ] Investigate Turtle WoW API for game data lookups
+- [ ] Implement external game data lookup service
 
 ### Priority 2: MCP Integration
-- [ ] Create `chronicler/integrations/mcp_client.py`
-- [ ] Define workflow trigger contract
+- [x] Create `integrations/mcp_client.py`
+- [x] Define workflow trigger contract
 - [ ] Test end-to-end: Chronicler event → MCP workflow → Discord result
+- [ ] Document MCP workflow patterns
 
-### Priority 3: Cleanup
-- [ ] Determine if `items`, `npcs`, `quests` tables are in use
-- [ ] Remove Google Sheets dependency if database is primary
-- [ ] Update environment variable documentation
+### Priority 3: Testing & Quality
+- [ ] Update tests for R2 integration
+- [ ] Add integration tests for MCP client
+- [ ] Database migration for game data table cleanup
 
 ---
 

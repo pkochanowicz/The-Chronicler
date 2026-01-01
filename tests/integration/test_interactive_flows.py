@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import pytest
-from unittest.mock import AsyncMock, patch
+
 
 class TestInteractiveFlows:
     """
@@ -23,7 +23,7 @@ class TestInteractiveFlows:
     """
 
     @pytest.mark.asyncio
-    async def test_burial_flow_permissions(self, mock_discord_interaction):
+    async def test_burial_flow_permissions(self, mock_interaction):
         """
         User Story: Non-officer user tries to execute /bury command and is denied access.
 
@@ -42,6 +42,7 @@ class TestInteractiveFlows:
         """
         try:
             from flows.burial_flow import BurialFlow
+
             burial_flow_exists = True
         except ImportError:
             burial_flow_exists = False
@@ -57,4 +58,3 @@ class TestInteractiveFlows:
         else:
             # BurialFlow not yet implemented - permission checks tested separately
             assert True, "BurialFlow not yet implemented - permission checks tested in test_permissions.py"
-

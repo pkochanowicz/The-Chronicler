@@ -14,7 +14,7 @@ Forged in the fires of Python and tempered by the strict laws of World of Warcra
 
 ---
 
-## ✨ Features (v1.2 "Reformation")
+## ✨ Features (v1.2.6 "The Singing Steel")
 
 ### 🖋️ The Sacred Ritual of Registration
 Forget boring forms. New members are greeted by *Chronicler Thaldrin* for a cinematic, 12-step interactive interview.

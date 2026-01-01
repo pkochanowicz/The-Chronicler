@@ -21,12 +21,11 @@ Configures the Discord bot client.
 import logging
 import discord
 from discord.ext import commands
-from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
+
 def create_bot():
-    settings = get_settings() # Get settings instance
     # Configure intents
     intents = discord.Intents.default()
     intents.message_content = True
@@ -36,14 +35,14 @@ def create_bot():
 
     # Create bot instance
     bot = commands.Bot(command_prefix="!", intents=intents)
-    
+
     @bot.event
     async def on_ready():
         logger.info(f"Bot logged in as {bot.user.name} (ID: {bot.user.id})")
-        
+
         # Load cogs here if not loaded in main
         # But main.py will handle loading.
-        
+
         # Sync slash commands
         try:
             synced = await bot.tree.sync()
@@ -52,5 +51,6 @@ def create_bot():
             logger.error(f"Failed to sync slash commands: {e}")
 
     return bot
+
 
 bot = create_bot()

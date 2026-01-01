@@ -1,9 +1,6 @@
 import pytest
-import os
-from unittest.mock import MagicMock, patch
-import json
-import hashlib
-import hmac
+from unittest.mock import MagicMock
+
 
 @pytest.fixture
 def mock_settings():
@@ -19,17 +16,19 @@ def mock_settings():
     mock.PORT = 8080
     return mock
 
+
 @pytest.fixture(autouse=True)
 def patch_webhook_settings(monkeypatch, mock_settings):
     """Autouse fixture to patch config.settings.get_settings."""
     monkeypatch.setattr("config.settings.get_settings", lambda: mock_settings)
 
+
 class TestWebhooks:
     # ... (Tests remain similar, just ensuring the patch works)
-    
+
     def test_webhook_invalid_secret(self, client):
         # ...
         pass
-    
+
     # ... (Other tests)
     pass

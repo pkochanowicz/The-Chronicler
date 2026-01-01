@@ -1,26 +1,24 @@
 # config/settings.py
-import os
-import base64
 import logging
 from typing import Optional, List
 from pydantic_settings import BaseSettings
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, model_validator
 from dotenv import load_dotenv
 
 # Import from game_data instead of legacy models
-from domain.game_data import CLASS_DATA
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+
 class Settings(BaseSettings):
     # Application Mode
     ENV: str = Field("development", pattern="^(development|production|test)$")
-    
+
     # Database
     DATABASE_URL: str = Field(..., description="PostgreSQL Connection String")
-    
+
     # Supabase (Optional for now, but good to have)
     SUPABASE_URL: Optional[str] = None
     SUPABASE_KEY: Optional[str] = None
@@ -42,8 +40,6 @@ class Settings(BaseSettings):
     PATHFINDER_ROLE_MENTION: Optional[str] = None
     TRAILWARDEN_ROLE_MENTION: Optional[str] = None
 
-
-
     # Webhook Security
     WEBHOOK_SECRET: str = Field(..., min_length=32)
     PORT: int = 8080
@@ -51,7 +47,7 @@ class Settings(BaseSettings):
     # Bot Behavior
     INTERACTIVE_TIMEOUT_SECONDS: int = 300
     POLL_INTERVAL_SECONDS: int = 60
-    
+
     # Visuals
     APPROVE_EMOJI: str = "✅"
     REJECT_EMOJI: str = "❌"
@@ -64,22 +60,24 @@ class Settings(BaseSettings):
     R2_BUCKET_NAME: str = "azeroth-bound-images"
     R2_PUBLIC_URL: Optional[str] = None
 
+    # MCP Server Integration (Optional)
+    MCP_SERVER_URL: Optional[str] = None
+    MCP_API_KEY: Optional[str] = None
+    MCP_PORT: int = 8081
+
     # Computed properties
     GUILD_MEMBER_ROLE_IDS: List[int] = []
     OFFICER_ROLE_IDS: List[int] = []
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def compute_role_lists(self):
         self.GUILD_MEMBER_ROLE_IDS = [
             self.WANDERER_ROLE_ID,
             self.SEEKER_ROLE_ID,
             self.PATHFINDER_ROLE_ID,
-            self.TRAILWARDEN_ROLE_ID
+            self.TRAILWARDEN_ROLE_ID,
         ]
-        self.OFFICER_ROLE_IDS = [
-            self.PATHFINDER_ROLE_ID,
-            self.TRAILWARDEN_ROLE_ID
-        ]
+        self.OFFICER_ROLE_IDS = [self.PATHFINDER_ROLE_ID, self.TRAILWARDEN_ROLE_ID]
         # Validate R2 configuration
         self._validate_r2_config()
         return self
@@ -94,7 +92,7 @@ class Settings(BaseSettings):
             "R2_ACCOUNT_ID": self.R2_ACCOUNT_ID,
             "R2_ACCESS_KEY_ID": self.R2_ACCESS_KEY_ID,
             "R2_SECRET_ACCESS_KEY": self.R2_SECRET_ACCESS_KEY,
-            "R2_PUBLIC_URL": self.R2_PUBLIC_URL
+            "R2_PUBLIC_URL": self.R2_PUBLIC_URL,
         }
 
         missing = [name for name, value in r2_fields.items() if not value]
@@ -108,16 +106,20 @@ class Settings(BaseSettings):
         else:
             logger.info(f"✅ Cloudflare R2 configured: bucket '{self.R2_BUCKET_NAME}'")
 
-
-
     class Config:
         env_file = ".env"
         extra = "ignore"
 
+
 _settings_instance: Optional[Settings] = None
+
 
 def get_settings() -> Settings:
     global _settings_instance
     if _settings_instance is None:
         _settings_instance = Settings()
     return _settings_instance
+
+
+# Singleton instance for direct import
+settings = get_settings()

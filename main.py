@@ -40,6 +40,7 @@ except Exception as e:
     logger.critical(f"Failed to import dependencies: {e}", exc_info=True)
     raise
 
+
 async def load_extensions():
     """Load Discord bot extensions (cogs)."""
     extensions = [
@@ -47,7 +48,7 @@ async def load_extensions():
         "commands.officer_commands",
         "commands.bank_commands",
         "commands.talent_commands",
-        "handlers.reaction_handler"
+        "handlers.reaction_handler",
     ]
     for ext in extensions:
         try:
@@ -55,6 +56,7 @@ async def load_extensions():
             logger.info(f"Loaded extension: {ext}")
         except Exception as e:
             logger.error(f"Failed to load extension {ext}: {e}", exc_info=True)
+
 
 async def start_discord_bot():
     """Start the Discord bot in the background."""
@@ -67,23 +69,25 @@ async def start_discord_bot():
     except Exception as e:
         logger.critical(f"Discord bot task failed: {e}", exc_info=True)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup event
     try:
         logger.info("Initializing database...")
         await init_db()
-        
-        # Start Discord bot task
+
+        # Start Discord bot task (fire-and-forget)
         logger.info("Initializing Discord bot task...")
-        bot_task = asyncio.create_task(start_discord_bot())
-        
+        asyncio.create_task(start_discord_bot())
+
         yield
-        
+
         # Shutdown event
         logger.info("Shutting down...")
     except Exception as e:
         logger.critical(f"Lifespan error: {e}", exc_info=True)
+
 
 app = FastAPI(title="The Chronicler", lifespan=lifespan)
 
@@ -95,9 +99,11 @@ try:
 except Exception as e:
     logger.error(f"Failed to include routers: {e}", exc_info=True)
 
+
 @app.get("/")
 async def read_root():
     return {"message": "The Chronicler is Online."}
+
 
 if __name__ == "__main__":
     # Get port from environment or default to 8080
@@ -105,6 +111,6 @@ if __name__ == "__main__":
     logger.info(f"Starting Uvicorn on port {port}...")
     try:
         # Run Uvicorn
-        uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+        uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)  # nosec B104
     except Exception as e:
         logger.critical(f"Uvicorn failed: {e}", exc_info=True)

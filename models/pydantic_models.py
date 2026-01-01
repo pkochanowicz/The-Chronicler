@@ -2,14 +2,14 @@ from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
 from schemas.db_schemas import (
-    CharacterRaceEnum, 
-    CharacterClassEnum, 
-    CharacterRoleEnum, 
-    CharacterStatusEnum, 
-    ChallengeMode
+    CharacterRaceEnum,
+    CharacterClassEnum,
+    CharacterRoleEnum,
+    CharacterStatusEnum,
 )
 
 # --- Character Models ---
+
 
 class CharacterBase(BaseModel):
     name: str = Field(..., max_length=64, description="Character's unique name")
@@ -25,12 +25,14 @@ class CharacterBase(BaseModel):
     trait_2: str = Field(..., max_length=128)
     trait_3: str = Field(..., max_length=128)
     request_sdxl: bool = False
-    
+
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
 
 class CharacterCreate(CharacterBase):
     discord_user_id: int
     discord_username: str = Field(..., max_length=64)
+
 
 class CharacterUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=64)
@@ -48,8 +50,9 @@ class CharacterUpdate(BaseModel):
     status: Optional[CharacterStatusEnum] = None
     is_confirmed: Optional[bool] = None
     request_sdxl: Optional[bool] = None
-    
+
     model_config = ConfigDict(populate_by_name=True)
+
 
 class CharacterInDB(CharacterCreate):
     id: int
@@ -57,48 +60,58 @@ class CharacterInDB(CharacterCreate):
     is_confirmed: bool = False
     created_at: datetime
     updated_at: datetime
-    
+
     # Additional DB fields
     recruitment_msg_id: Optional[int] = None
     forum_post_id: Optional[int] = None
     reviewed_by_user_id: Optional[int] = None
     # Changed from Dict to Union[Dict, List] to support multiple embeds
-    embed_json: Union[Dict[str, Any], List[Dict[str, Any]]] = Field(default_factory=list)
+    embed_json: Union[Dict[str, Any], List[Dict[str, Any]]] = Field(
+        default_factory=list
+    )
     death_cause: Optional[str] = None
     death_story: Optional[str] = None
     talents_json: Dict[str, Any] = Field(default_factory=dict)
     notes: Optional[str] = None
 
+
 # --- Talent Models ---
+
 
 class CharacterTalentBase(BaseModel):
     character_id: int
     talent_tree_id: str = Field(..., max_length=255)
     talent_id: str = Field(..., max_length=255)
     points_spent: int = Field(..., ge=0)
-    
+
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
 
 class CharacterTalentCreate(CharacterTalentBase):
     pass
+
 
 class CharacterTalentInDB(CharacterTalentBase):
     id: int
     created_at: datetime
     updated_at: datetime
 
+
 # --- Graveyard Models ---
+
 
 class GraveyardBase(BaseModel):
     character_id: int
     death_timestamp: Optional[datetime] = None
     cause_of_death: Optional[str] = None
     eulogy: Optional[str] = None
-    
+
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
 
 class GraveyardCreate(GraveyardBase):
     pass
+
 
 class GraveyardInDB(GraveyardBase):
     id: int

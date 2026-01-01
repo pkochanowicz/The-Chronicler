@@ -18,19 +18,30 @@ Test coverage for integrations/mcp_client.py:
 """
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from aiohttp import ClientError
-from integrations.mcp_client import (
-    MCPWorkflowTrigger,
-    WorkflowResponse,
-    get_mcp_client
-)
+from integrations.mcp_client import MCPWorkflowTrigger, WorkflowResponse, get_mcp_client
+
+
+def create_mock_response(status=200, json_data=None, text_data=None):
+    """Helper to create a properly mocked aiohttp response with context manager support."""
+    mock_response = AsyncMock()
+    mock_response.status = status
+    if json_data is not None:
+        mock_response.json = AsyncMock(return_value=json_data)
+    if text_data is not None:
+        mock_response.text = AsyncMock(return_value=text_data)
+    # Set up async context manager protocol
+    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+    # __aexit__ should return None/False to NOT suppress exceptions
+    mock_response.__aexit__ = AsyncMock(return_value=None)
+    return mock_response
 
 
 @pytest.fixture
 def mock_aiohttp_session():
     """Mock aiohttp ClientSession."""
-    with patch('integrations.mcp_client.aiohttp.ClientSession') as mock_session:
+    with patch("integrations.mcp_client.aiohttp.ClientSession") as mock_session:
         session_instance = AsyncMock()
         mock_session.return_value = session_instance
         yield session_instance
@@ -40,9 +51,7 @@ def mock_aiohttp_session():
 def mcp_client():
     """Create MCPWorkflowTrigger instance."""
     return MCPWorkflowTrigger(
-        base_url="http://localhost:8000",
-        api_key="test_api_key",
-        timeout=30
+        base_url="http://localhost:8000", api_key="test_api_key", timeout=30
     )
 
 
@@ -51,7 +60,7 @@ class TestMCPWorkflowTriggerInit:
 
     def test_init_default_settings(self):
         """Test initialization with default settings."""
-        with patch('integrations.mcp_client.settings') as mock_settings:
+        with patch("integrations.mcp_client.settings") as mock_settings:
             mock_settings.MCP_PORT = 8000
             mock_settings.MCP_API_KEY = "default_key"
 
@@ -63,9 +72,7 @@ class TestMCPWorkflowTriggerInit:
     def test_init_custom_settings(self):
         """Test initialization with custom settings."""
         client = MCPWorkflowTrigger(
-            base_url="http://custom:9000",
-            api_key="custom_key",
-            timeout=60
+            base_url="http://custom:9000", api_key="custom_key", timeout=60
         )
 
         assert client.base_url == "http://custom:9000"
@@ -77,20 +84,20 @@ class TestMCPWorkflowTriggerCharacterWelcome:
     """Test character welcome workflow triggering."""
 
     @pytest.mark.asyncio
-    async def test_trigger_character_welcome_success(self, mcp_client, mock_aiohttp_session):
+    async def test_trigger_character_welcome_success(
+        self, mcp_client, mock_aiohttp_session
+    ):
         """Test successful character welcome trigger."""
-        # Mock response
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={
-            "workflow_id": "wf_123456",
-            "message": "Welcome workflow triggered"
-        })
+        mock_response = create_mock_response(
+            status=200,
+            json_data={
+                "workflow_id": "wf_123456",
+                "message": "Welcome workflow triggered",
+            },
+        )
 
-        mock_aiohttp_session.request = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aexit__ = AsyncMock()
-
+        # Use MagicMock (not AsyncMock) since session.request() needs to return the context manager directly
+        mock_aiohttp_session.request = MagicMock(return_value=mock_response)
         mcp_client.session = mock_aiohttp_session
 
         result = await mcp_client.trigger_character_welcome(
@@ -100,8 +107,8 @@ class TestMCPWorkflowTriggerCharacterWelcome:
                 "name": "Thorgar",
                 "race": "Orc",
                 "class": "Warrior",
-                "backstory": "A veteran warrior..."
-            }
+                "backstory": "A veteran warrior...",
+            },
         )
 
         assert isinstance(result, WorkflowResponse)
@@ -110,15 +117,19 @@ class TestMCPWorkflowTriggerCharacterWelcome:
         assert result.error is None
 
     @pytest.mark.asyncio
-    async def test_trigger_character_welcome_connection_error(self, mcp_client, mock_aiohttp_session):
+    async def test_trigger_character_welcome_connection_error(
+        self, mcp_client, mock_aiohttp_session
+    ):
         """Test character welcome with connection error."""
-        mock_aiohttp_session.request = AsyncMock(side_effect=ClientError("Connection refused"))
+        mock_aiohttp_session.request = MagicMock(
+            side_effect=ClientError("Connection refused")
+        )
         mcp_client.session = mock_aiohttp_session
 
         result = await mcp_client.trigger_character_welcome(
             member_id="123456789",
             guild_id="987654321",
-            character_data={"name": "Thorgar"}
+            character_data={"name": "Thorgar"},
         )
 
         assert result.success is False
@@ -130,19 +141,19 @@ class TestMCPWorkflowTriggerEventAnnouncement:
     """Test event announcement workflow triggering."""
 
     @pytest.mark.asyncio
-    async def test_trigger_event_announcement_success(self, mcp_client, mock_aiohttp_session):
+    async def test_trigger_event_announcement_success(
+        self, mcp_client, mock_aiohttp_session
+    ):
         """Test successful event announcement trigger."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={
-            "workflow_id": "wf_event_001",
-            "message": "Event announcement triggered"
-        })
+        mock_response = create_mock_response(
+            status=200,
+            json_data={
+                "workflow_id": "wf_event_001",
+                "message": "Event announcement triggered",
+            },
+        )
 
-        mock_aiohttp_session.request = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aexit__ = AsyncMock()
-
+        mock_aiohttp_session.request = MagicMock(return_value=mock_response)
         mcp_client.session = mock_aiohttp_session
 
         result = await mcp_client.trigger_event_announcement(
@@ -150,30 +161,28 @@ class TestMCPWorkflowTriggerEventAnnouncement:
                 "title": "Molten Core Raid",
                 "description": "First guild raid!",
                 "date": "2025-01-15",
-                "time": "19:00 ST"
+                "time": "19:00 ST",
             },
-            generate_banner=True
+            generate_banner=True,
         )
 
         assert result.success is True
         assert result.workflow_id == "wf_event_001"
 
     @pytest.mark.asyncio
-    async def test_trigger_event_announcement_workflow_error(self, mcp_client, mock_aiohttp_session):
+    async def test_trigger_event_announcement_workflow_error(
+        self, mcp_client, mock_aiohttp_session
+    ):
         """Test event announcement with workflow error."""
-        mock_response = AsyncMock()
-        mock_response.status = 500
-        mock_response.text = AsyncMock(return_value="Internal server error")
+        mock_response = create_mock_response(
+            status=500, text_data="Internal server error"
+        )
 
-        mock_aiohttp_session.request = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aexit__ = AsyncMock()
-
+        mock_aiohttp_session.request = MagicMock(return_value=mock_response)
         mcp_client.session = mock_aiohttp_session
 
         result = await mcp_client.trigger_event_announcement(
-            event_data={"title": "Test Event"},
-            generate_banner=False
+            event_data={"title": "Test Event"}, generate_banner=False
         )
 
         assert result.success is False
@@ -184,25 +193,23 @@ class TestMCPWorkflowTriggerChannelSummary:
     """Test channel summary request."""
 
     @pytest.mark.asyncio
-    async def test_request_channel_summary_success(self, mcp_client, mock_aiohttp_session):
+    async def test_request_channel_summary_success(
+        self, mcp_client, mock_aiohttp_session
+    ):
         """Test successful channel summary request."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={
-            "workflow_id": "wf_summary_001",
-            "summary": "• User A posted about raid\n• User B asked about talents"
-        })
+        mock_response = create_mock_response(
+            status=200,
+            json_data={
+                "workflow_id": "wf_summary_001",
+                "summary": "• User A posted about raid\n• User B asked about talents",
+            },
+        )
 
-        mock_aiohttp_session.request = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aexit__ = AsyncMock()
-
+        mock_aiohttp_session.request = MagicMock(return_value=mock_response)
         mcp_client.session = mock_aiohttp_session
 
         result = await mcp_client.request_channel_summary(
-            channel_id="123456789",
-            hours=24,
-            format="bullet"
+            channel_id="123456789", hours=24, format="bullet"
         )
 
         assert result.success is True
@@ -213,28 +220,24 @@ class TestMCPWorkflowTriggerPortraitGeneration:
     """Test portrait generation workflow."""
 
     @pytest.mark.asyncio
-    async def test_trigger_portrait_generation_success(self, mcp_client, mock_aiohttp_session):
+    async def test_trigger_portrait_generation_success(
+        self, mcp_client, mock_aiohttp_session
+    ):
         """Test successful portrait generation trigger."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={
-            "workflow_id": "wf_portrait_001",
-            "portrait_url": "https://r2.dev/portraits/thorgar.png"
-        })
+        mock_response = create_mock_response(
+            status=200,
+            json_data={
+                "workflow_id": "wf_portrait_001",
+                "portrait_url": "https://r2.dev/portraits/thorgar.png",
+            },
+        )
 
-        mock_aiohttp_session.request = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aexit__ = AsyncMock()
-
+        mock_aiohttp_session.request = MagicMock(return_value=mock_response)
         mcp_client.session = mock_aiohttp_session
 
         result = await mcp_client.trigger_portrait_generation(
             character_id=42,
-            character_data={
-                "name": "Thorgar",
-                "race": "Orc",
-                "class": "Warrior"
-            }
+            character_data={"name": "Thorgar", "race": "Orc", "class": "Warrior"},
         )
 
         assert result.success is True
@@ -247,19 +250,13 @@ class TestMCPWorkflowTriggerErrorHandling:
     @pytest.mark.asyncio
     async def test_authentication_error_401(self, mcp_client, mock_aiohttp_session):
         """Test 401 authentication error."""
-        mock_response = AsyncMock()
-        mock_response.status = 401
+        mock_response = create_mock_response(status=401)
 
-        mock_aiohttp_session.request = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aexit__ = AsyncMock()
-
+        mock_aiohttp_session.request = MagicMock(return_value=mock_response)
         mcp_client.session = mock_aiohttp_session
 
         result = await mcp_client.trigger_character_welcome(
-            member_id="123",
-            guild_id="456",
-            character_data={"name": "Test"}
+            member_id="123", guild_id="456", character_data={"name": "Test"}
         )
 
         assert result.success is False
@@ -268,19 +265,13 @@ class TestMCPWorkflowTriggerErrorHandling:
     @pytest.mark.asyncio
     async def test_authentication_error_403(self, mcp_client, mock_aiohttp_session):
         """Test 403 authentication error."""
-        mock_response = AsyncMock()
-        mock_response.status = 403
+        mock_response = create_mock_response(status=403)
 
-        mock_aiohttp_session.request = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aexit__ = AsyncMock()
-
+        mock_aiohttp_session.request = MagicMock(return_value=mock_response)
         mcp_client.session = mock_aiohttp_session
 
         result = await mcp_client.trigger_character_welcome(
-            member_id="123",
-            guild_id="456",
-            character_data={"name": "Test"}
+            member_id="123", guild_id="456", character_data={"name": "Test"}
         )
 
         assert result.success is False
@@ -293,14 +284,9 @@ class TestMCPWorkflowTriggerHealthCheck:
     @pytest.mark.asyncio
     async def test_health_check_success(self, mcp_client, mock_aiohttp_session):
         """Test successful health check."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={"status": "ok"})
+        mock_response = create_mock_response(status=200, json_data={"status": "ok"})
 
-        mock_aiohttp_session.request = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_aiohttp_session.__aexit__ = AsyncMock()
-
+        mock_aiohttp_session.request = MagicMock(return_value=mock_response)
         mcp_client.session = mock_aiohttp_session
 
         result = await mcp_client.health_check()
@@ -310,7 +296,9 @@ class TestMCPWorkflowTriggerHealthCheck:
     @pytest.mark.asyncio
     async def test_health_check_failure(self, mcp_client, mock_aiohttp_session):
         """Test health check failure."""
-        mock_aiohttp_session.request = AsyncMock(side_effect=ClientError("Connection failed"))
+        mock_aiohttp_session.request = MagicMock(
+            side_effect=ClientError("Connection failed")
+        )
         mcp_client.session = mock_aiohttp_session
 
         result = await mcp_client.health_check()
@@ -324,10 +312,16 @@ class TestMCPWorkflowTriggerContextManager:
     @pytest.mark.asyncio
     async def test_context_manager_creates_session(self, mcp_client):
         """Test that context manager creates session."""
-        with patch('integrations.mcp_client.aiohttp.ClientSession') as mock_session:
+        mock_session_instance = AsyncMock()
+        mock_session_instance.close = AsyncMock()
+
+        with patch(
+            "integrations.mcp_client.aiohttp.ClientSession",
+            return_value=mock_session_instance,
+        ) as mock_session_class:
             async with mcp_client as client:
                 assert client.session is not None
-                mock_session.assert_called_once()
+                mock_session_class.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_context_manager_closes_session(self, mcp_client):
@@ -335,7 +329,9 @@ class TestMCPWorkflowTriggerContextManager:
         mock_session = AsyncMock()
         mock_session.close = AsyncMock()
 
-        with patch('integrations.mcp_client.aiohttp.ClientSession', return_value=mock_session):
+        with patch(
+            "integrations.mcp_client.aiohttp.ClientSession", return_value=mock_session
+        ):
             async with mcp_client:
                 pass
 
@@ -349,6 +345,7 @@ class TestMCPWorkflowTriggerSingleton:
         """Test get_mcp_client creates singleton instance."""
         # Reset singleton
         import integrations.mcp_client as mcp_module
+
         mcp_module._mcp_client = None
 
         client = get_mcp_client()
@@ -358,6 +355,7 @@ class TestMCPWorkflowTriggerSingleton:
     def test_get_mcp_client_returns_same_instance(self):
         """Test get_mcp_client returns same instance."""
         import integrations.mcp_client as mcp_module
+
         mcp_module._mcp_client = None
 
         client1 = get_mcp_client()

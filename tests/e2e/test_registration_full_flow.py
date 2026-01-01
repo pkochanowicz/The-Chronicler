@@ -6,11 +6,8 @@ All external services (Discord, Google Sheets) are mocked for local testing.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock
 import asyncio
-from uuid import uuid4 # Import uuid4 for generating test data
-from flows.registration_flow import RegistrationFlow # Assuming this will be used by some tests
-from models.pydantic_models import CharacterCreate # Assuming this will be used by some tests
 
 
 class TestRegistrationFullFlow:
@@ -27,7 +24,7 @@ class TestRegistrationFullFlow:
     # Removed test_registration_happy_path_complete due to its reliance on mock_sheets_client.
 
     @pytest.mark.asyncio
-    async def test_registration_rejection_flow(self, mock_discord_interaction):
+    async def test_registration_rejection_flow(self, mock_interaction):
         """
         User Story: Guild member submits character but officer determines it needs revision.
 
@@ -48,7 +45,6 @@ class TestRegistrationFullFlow:
         # - User receives appropriate DM with reason
         # - Sheet updated with reviewed_by officer ID
 
-        mock_bot = MagicMock()
         mock_user = AsyncMock()
         mock_user.send = AsyncMock()
 
@@ -169,7 +165,7 @@ class TestRegistrationFullFlow:
         # Simulate concurrent operations
         results = await asyncio.gather(
             mock_user1.send("Registration 1 complete"),
-            mock_user2.send("Registration 2 complete")
+            mock_user2.send("Registration 2 complete"),
         )
 
         assert len(results) == 2, "Both concurrent registrations should succeed"
@@ -179,40 +175,39 @@ class TestRegistrationFullFlow:
 
 # Removed TestRegistrationErrorRecovery class and its tests due to their reliance on mock_sheets_client.
 
+
 class TestRegistrationDataIntegrity:
     """
     Test data consistency throughout the registration flow.
     """
 
+    @pytest.mark.skip(
+        reason="Placeholder test - fixture removed, needs PostgreSQL integration implementation"
+    )
     @pytest.mark.asyncio
-    async def test_data_consistency_across_systems(self, mock_complete_character_data):
+    async def test_data_consistency_across_systems(self):
         """
         User Story: Officer reviews character and expects identical information across all platforms.
 
         Flow:
         1. User submits character data via registration flow
-        2. Data written to Google Sheets as source of truth
-        3. Recruitment post embed generated from sheet data
-        4. Forum post embed generated from sheet data
+        2. Data written to PostgreSQL as source of truth
+        3. Recruitment post embed generated from database data
+        4. Forum post embed generated from database data
         5. Officer compares data across all three systems
 
         Expected: Character name, race, class, backstory, and all other fields match exactly
-        across Google Sheets, recruitment channel embed, and forum post embed. No data
+        across PostgreSQL, recruitment channel embed, and forum post embed. No data
         transformation errors or inconsistencies. Timestamps properly recorded at each step.
+
+        TODO: Implement full E2E test with:
+        - Create test character via CharacterRepository
+        - Trigger recruitment flow
+        - Verify data consistency across database, recruitment embed, forum post
+        - Check timestamps and status transitions
         """
-        # Document data integrity requirements
-        # Same character data should appear in:
-        # 1. Google Sheets row
-        # 2. Recruitment channel embed
-        # 3. Forum post embed
-        # 4. Approval DM
-
-        char_name = mock_complete_character_data["char_name"]
-
-        # All representations should use same character name
-        assert char_name == "Thorgar Ironforge"
-
-        # Future enhancement: Verify actual data consistency in integrated test
+        # Placeholder for future E2E integration test
+        pass
 
     @pytest.mark.asyncio
     async def test_special_characters_handling(self):

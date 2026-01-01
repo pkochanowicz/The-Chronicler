@@ -76,7 +76,7 @@ The FastAPI application entry point.
 12-step flow using Discord Modals and Buttons.
 - **State Management:** Temporary state stored in memory (Redis planned).
 - **Finalization:** Calls `CharacterService.create_character` to persist to PostgreSQL.
-- **Image Upload:** Uploads to Discord CDN, URL stored in `characters` table.
+- **Image Upload:** Uploads to Cloudflare R2 via `services/image_storage.py`, permanent CDN URL stored in `characters` table.
 
 ### /bury
 Ceremonial flow for handling character death.
