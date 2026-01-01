@@ -16,17 +16,8 @@ repos:
       - id: ruff-format
         types_or: [python, pyi]
 
-  # Run pytest before commit
-  - repo: local
-    hooks:
-      - id: pytest
-        name: pytest
-        entry: poetry run pytest
-        language: system
-        pass_filenames: false
-        always_run: true
-        args: [tests/, -v, --tb=short]
-        stages: [pre-commit]
+  # Note: pytest runs in GitHub Actions CI, not in pre-commit
+  # to avoid environment issues with poetry/virtualenv in git hooks
 
   # Standard pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
