@@ -562,11 +562,16 @@ class RegistrationFlow(InteractiveFlow):
                         )
                         await session.commit()
 
-                        # Update the recruitment message if it exists
+                        # Update or create the recruitment message
                         if (
                             existing_char.recruitment_msg_id
                             and existing_char.forum_post_id
                         ):
+                            # Update existing recruitment post
+                            logger.info(
+                                f"Updating existing recruitment post for {char_create.name} "
+                                f"(msg_id={existing_char.recruitment_msg_id}, forum_id={existing_char.forum_post_id})"
+                            )
                             try:
                                 settings = get_settings()
                                 channel = self.bot.get_channel(
@@ -596,16 +601,56 @@ class RegistrationFlow(InteractiveFlow):
                                             await starter_message.edit(
                                                 embeds=embeds_to_send
                                             )
+                                            logger.info(
+                                                f"Successfully updated recruitment post for {char_create.name}"
+                                            )
+                                    else:
+                                        logger.warning(
+                                            f"Could not find forum thread {existing_char.forum_post_id}, creating new post"
+                                        )
+                                        # Forum thread not found, create new post
+                                        char_dict = created_char.model_dump()
+                                        char_dict["embed_json"] = embed_json
+                                        char_dict["char_name"] = created_char.name
+                                        char_dict[
+                                            "discord_name"
+                                        ] = created_char.discord_username
+                                        await handle_post_to_recruitment(
+                                            char_dict, discord_bot=self.bot
+                                        )
                             except Exception as e:
                                 logger.error(
-                                    f"Failed to update recruitment message: {e}"
+                                    f"Failed to update recruitment message: {e}",
+                                    exc_info=True,
                                 )
+                                logger.info("Creating new recruitment post instead")
+                                # If update fails, create new post
+                                char_dict = created_char.model_dump()
+                                char_dict["embed_json"] = embed_json
+                                char_dict["char_name"] = created_char.name
+                                char_dict[
+                                    "discord_name"
+                                ] = created_char.discord_username
+                                await handle_post_to_recruitment(
+                                    char_dict, discord_bot=self.bot
+                                )
+                        else:
+                            # No existing recruitment post, create new one
+                            logger.info(
+                                f"No existing recruitment post for {char_create.name}, creating new one"
+                            )
+                            char_dict = created_char.model_dump()
+                            char_dict["embed_json"] = embed_json
+                            char_dict["char_name"] = created_char.name
+                            char_dict["discord_name"] = created_char.discord_username
+                            await handle_post_to_recruitment(
+                                char_dict, discord_bot=self.bot
+                            )
 
                         await self.interaction.followup.send(
                             f"✨ **UPDATED!** Character '{char_create.name}' has been updated.",
                             ephemeral=True,
                         )
-                        # Don't call handle_post_to_recruitment for updates - we already updated the message above
                     else:
                         # Not owner and not officer - show error
                         await self.interaction.followup.send(
