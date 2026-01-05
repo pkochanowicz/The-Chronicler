@@ -58,14 +58,17 @@ async def handle_webhook(request):
     return web.Response(status=200, text="OK")
 
 
-async def handle_post_to_recruitment(character_data):
-    if not bot:
+async def handle_post_to_recruitment(character_data, discord_bot=None):
+    bot_instance = discord_bot or bot
+    if not bot_instance:
         logger.error("Bot not initialized")
         return
 
     try:
         channel_id = get_settings().RECRUITMENT_CHANNEL_ID
-        channel = bot.get_channel(channel_id) or await bot.fetch_channel(channel_id)
+        channel = bot_instance.get_channel(
+            channel_id
+        ) or await bot_instance.fetch_channel(channel_id)
 
         embed_json = character_data.get("embed_json", [])
         if isinstance(embed_json, str):
@@ -103,7 +106,7 @@ async def handle_post_to_recruitment(character_data):
 
         char_id = character_data.get("id")
         if char_id:
-            view = OfficerControlView(bot, int(char_id))
+            view = OfficerControlView(bot_instance, int(char_id))
             await message.edit(view=view)
 
             # Update DB with recruitment message ID if needed

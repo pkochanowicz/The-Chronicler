@@ -259,7 +259,10 @@ class RegistrationFlow(InteractiveFlow):
 
         async def cb(interaction):
             modal = LongTextModal(
-                title="Backstory", label="Backstory", placeholder="Once upon a time..."
+                title="Backstory",
+                label="Backstory",
+                placeholder="Once upon a time...",
+                max_length=2048,
             )
             await interaction.response.send_modal(modal)
             await modal.wait()
@@ -344,17 +347,21 @@ class RegistrationFlow(InteractiveFlow):
 
         async def upload_callback(interaction: discord.Interaction):
             await interaction.response.send_message(
-                "Please upload your image directly to this chat within the next 60 seconds. Make sure it's an image file!",
+                "📸 **Upload your character portrait:**\n\n"
+                "• Click the **+** button (or 📎 paperclip icon) next to the message box\n"
+                "• Select **Upload a File** and choose your image\n"
+                "• Send the message with the image\n\n"
+                "⏱️ You have **60 seconds**. Drag & drop is not supported in ephemeral chats.\n"
+                "Make sure it's an image file (PNG, JPG, etc.)!",
                 ephemeral=True,
             )
-            view.stop()
 
             try:
 
                 def check(m):
                     return (
-                        m.author == self.user
-                        and m.channel == interaction.channel
+                        m.author.id == self.user.id
+                        and m.channel.id == interaction.channel_id
                         and m.attachments
                     )
 
@@ -402,6 +409,9 @@ class RegistrationFlow(InteractiveFlow):
                 )
                 self.data["portrait_url"] = settings.DEFAULT_PORTRAIT_URL
                 self.data["request_sdxl"] = False
+            finally:
+                # Only stop the view after upload process completes
+                view.stop()
 
         async def url_callback(interaction):
             modal = SingleInputModal(
@@ -532,7 +542,7 @@ class RegistrationFlow(InteractiveFlow):
                 char_dict["char_name"] = created_char.name
                 char_dict["discord_name"] = created_char.discord_username
 
-                await handle_post_to_recruitment(char_dict)
+                await handle_post_to_recruitment(char_dict, discord_bot=self.bot)
 
             await self.interaction.followup.send(
                 "✨ **SUBMITTED!** Check #recruitment.", ephemeral=True
@@ -562,12 +572,12 @@ class TraitsModal(Modal):
 
 
 class LongTextModal(Modal):
-    def __init__(self, title, label, placeholder):
+    def __init__(self, title, label, placeholder, max_length=1024):
         super().__init__(title=title)
         self.text_input = TextInput(
             label=label,
             style=discord.TextStyle.paragraph,
-            max_length=1024,
+            max_length=max_length,
             placeholder=placeholder,
             required=True,
         )

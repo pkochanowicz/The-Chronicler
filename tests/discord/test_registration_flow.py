@@ -18,7 +18,7 @@ async def test_registration_finalize_success(mock_interaction, async_session):
         name="TestChar",
         race=CharacterRaceEnum.Human,
         class_name=CharacterClassEnum.Warrior,
-        roles=[CharacterRoleEnum.Tank, CharacterRoleEnum.DPS],
+        roles=[CharacterRoleEnum.Tank, CharacterRoleEnum.MeleeDPS],
         professions=["Mining", "Blacksmithing"],
         backstory="A long story...",
         personality="Gruff",

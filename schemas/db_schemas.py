@@ -1,4 +1,17 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Text, ForeignKey, CheckConstraint, UniqueConstraint, Numeric, BigInteger
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    DateTime,
+    Enum,
+    Text,
+    ForeignKey,
+    CheckConstraint,
+    UniqueConstraint,
+    Numeric,
+    BigInteger,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.sql import func
@@ -7,6 +20,7 @@ import enum
 
 # --- Enums (from docs/architecture_UI_UX.md 2.3.1 Canonical Data Enums) ---
 
+
 class ItemQualityEnum(enum.Enum):
     Poor = 0
     Common = 1
@@ -14,6 +28,7 @@ class ItemQualityEnum(enum.Enum):
     Rare = 3
     Epic = 4
     Legendary = 5
+
 
 class CharacterRaceEnum(enum.Enum):
     Human = "Human"
@@ -28,6 +43,7 @@ class CharacterRaceEnum(enum.Enum):
     HighElf = "High Elf"
     Other = "Other"
 
+
 class CharacterClassEnum(enum.Enum):
     Warrior = "Warrior"
     Paladin = "Paladin"
@@ -39,10 +55,13 @@ class CharacterClassEnum(enum.Enum):
     Warlock = "Warlock"
     Druid = "Druid"
 
+
 class CharacterRoleEnum(enum.Enum):
     Tank = "Tank"
     Healer = "Healer"
-    DPS = "DPS"
+    MeleeDPS = "Melee DPS"
+    RangedDPS = "Ranged DPS"
+
 
 class CharacterStatusEnum(enum.Enum):
     PENDING = "PENDING"
@@ -50,6 +69,7 @@ class CharacterStatusEnum(enum.Enum):
     REJECTED = "REJECTED"
     DECEASED = "DECEASED"
     BURIED = "BURIED"
+
 
 class CreatureTypeEnum(enum.Enum):
     Beast = "Beast"
@@ -64,6 +84,7 @@ class CreatureTypeEnum(enum.Enum):
     Totem = "Totem"
     Other = "Other"
 
+
 class SpellSchoolEnum(enum.Enum):
     Physical = "Physical"
     Arcane = "Arcane"
@@ -73,11 +94,13 @@ class SpellSchoolEnum(enum.Enum):
     Shadow = "Shadow"
     Holy = "Holy"
 
+
 class FactionAlignmentEnum(enum.Enum):
     Alliance = "Alliance"
     Horde = "Horde"
     Neutral = "Neutral"
     Hostile = "Hostile"
+
 
 class QuestTypeEnum(enum.Enum):
     Normal = "Normal"
@@ -88,17 +111,21 @@ class QuestTypeEnum(enum.Enum):
     ClassQuest = "Class Quest"
     Legendary = "Legendary"
 
+
 class ChallengeMode(enum.Enum):
     None_ = "None"
     Hardcore = "Hardcore"
     Immortal = "Immortal"
     Inferno = "Inferno"
 
+
 class BankTransactionTypeEnum(enum.Enum):
     DEPOSIT = "DEPOSIT"
     WITHDRAWAL = "WITHDRAWAL"
 
+
 # --- Core Entities (from docs/architecture_UI_UX.md 2.3.2 Core Entity Schemas) ---
+
 
 class Character(Base):
     __tablename__ = "characters"
@@ -109,8 +136,8 @@ class Character(Base):
     name = Column(String(64), unique=True, nullable=False)
     race = Column(Enum(CharacterRaceEnum), nullable=False)
     class_name = Column("class", Enum(CharacterClassEnum), nullable=False)
-    roles = Column(ARRAY(String), default=[], nullable=False) # TEXT[] per docs
-    professions = Column(ARRAY(String), default=[], nullable=True) # TEXT[] per docs
+    roles = Column(ARRAY(String), default=[], nullable=False)  # TEXT[] per docs
+    professions = Column(ARRAY(String), default=[], nullable=True)  # TEXT[] per docs
     backstory = Column(Text, nullable=False)
     personality = Column(Text, nullable=True)
     quotes = Column(Text, nullable=True)
@@ -118,7 +145,9 @@ class Character(Base):
     trait_1 = Column(String(128), nullable=False)
     trait_2 = Column(String(128), nullable=False)
     trait_3 = Column(String(128), nullable=False)
-    status = Column(Enum(CharacterStatusEnum), default=CharacterStatusEnum.PENDING, nullable=False)
+    status = Column(
+        Enum(CharacterStatusEnum), default=CharacterStatusEnum.PENDING, nullable=False
+    )
     is_confirmed = Column(Boolean, default=False, nullable=False)
     request_sdxl = Column(Boolean, default=False, nullable=False)
     recruitment_msg_id = Column(BigInteger, nullable=True)
@@ -129,35 +158,49 @@ class Character(Base):
     death_story = Column(Text, nullable=True)
     talents_json = Column(JSONB, default={}, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
     notes = Column(Text, nullable=True)
 
-    talents = relationship("CharacterTalent", back_populates="character", cascade="all, delete-orphan")
-    graveyard_entries = relationship("Graveyard", back_populates="character", cascade="all, delete-orphan")
+    talents = relationship(
+        "CharacterTalent", back_populates="character", cascade="all, delete-orphan"
+    )
+    graveyard_entries = relationship(
+        "Graveyard", back_populates="character", cascade="all, delete-orphan"
+    )
+
 
 class CharacterTalent(Base):
     __tablename__ = "character_talents"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False)
+    character_id = Column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False
+    )
     talent_tree_id = Column(String(255), nullable=False)
     talent_id = Column(String(255), nullable=False)
     points_spent = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
 
     character = relationship("Character", back_populates="talents")
 
     __table_args__ = (
-        CheckConstraint('points_spent >= 0', name='points_spent_positive'),
-        UniqueConstraint('character_id', 'talent_id', name='uq_character_talent')
+        CheckConstraint("points_spent >= 0", name="points_spent_positive"),
+        UniqueConstraint("character_id", "talent_id", name="uq_character_talent"),
     )
+
 
 class Graveyard(Base):
     __tablename__ = "graveyard"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False)
+    character_id = Column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False
+    )
     death_timestamp = Column(DateTime(timezone=True), server_default=func.now())
     cause_of_death = Column(Text, nullable=True)
     eulogy = Column(Text, nullable=True)
@@ -165,30 +208,36 @@ class Graveyard(Base):
 
     character = relationship("Character", back_populates="graveyard_entries")
 
+
 class Talent(Base):
     __tablename__ = "talents"
 
     id = Column(String(128), primary_key=True)
     name = Column(String(64), nullable=False)
-    tree_id = Column(String(64), ForeignKey("talent_trees.id", ondelete="CASCADE"), nullable=False)
+    tree_id = Column(
+        String(64), ForeignKey("talent_trees.id", ondelete="CASCADE"), nullable=False
+    )
     tier = Column(Integer, nullable=False)
-    talent_column = Column("column", Integer, nullable=True) # Mapped to "column" in DB
+    talent_column = Column("column", Integer, nullable=True)  # Mapped to "column" in DB
     max_rank = Column(Integer, default=1, nullable=False)
     description = Column(Text, nullable=False)
     icon_url = Column(Text, nullable=False)
     prerequisite_id = Column(String(128), ForeignKey("talents.id"), nullable=True)
     points_req = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
 
     prerequisite = relationship("Talent", remote_side=[id])
     talent_tree = relationship("TalentTree", back_populates="talents")
 
     __table_args__ = (
-        CheckConstraint('tier >= 1 AND tier <= 7', name='talent_tier_range'),
-        CheckConstraint('"column" >= 1 AND "column" <= 4', name='talent_column_range'),
-        CheckConstraint('max_rank >= 1', name='talent_max_rank_positive'),
+        CheckConstraint("tier >= 1 AND tier <= 7", name="talent_tier_range"),
+        CheckConstraint('"column" >= 1 AND "column" <= 4', name="talent_column_range"),
+        CheckConstraint("max_rank >= 1", name="talent_max_rank_positive"),
     )
+
 
 class TalentTree(Base):
     __tablename__ = "talent_trees"
@@ -198,9 +247,12 @@ class TalentTree(Base):
     name = Column(String(64), nullable=False)
     background_image_url = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
 
     talents = relationship("Talent", back_populates="talent_tree")
+
 
 class Item(Base):
     __tablename__ = "items"
@@ -230,15 +282,21 @@ class Item(Base):
     source_type = Column(String(64), nullable=True)
     source_details_json = Column(JSONB, default={}, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
 
     item_set = relationship("ItemSet", back_populates="items")
     # New: Link to guild bank items
     bank_entries = relationship("GuildBankItem", back_populates="item")
 
     __table_args__ = (
-        CheckConstraint('required_level >= 1 AND required_level <= 60', name='item_required_level_range'),
+        CheckConstraint(
+            "required_level >= 1 AND required_level <= 60",
+            name="item_required_level_range",
+        ),
     )
+
 
 class ItemSet(Base):
     __tablename__ = "item_sets"
@@ -251,9 +309,12 @@ class ItemSet(Base):
     set_bonuses_json = Column(JSONB, default={}, nullable=False)
     items_in_set_ids = Column(ARRAY(BigInteger), default=[], nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
 
     items = relationship("Item", back_populates="item_set")
+
 
 class Npc(Base):
     __tablename__ = "npcs"
@@ -274,13 +335,16 @@ class Npc(Base):
     is_vendor = Column(Boolean, default=False, nullable=False)
     is_quest_giver = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
 
     faction = relationship("Faction", back_populates="npcs")
 
     __table_args__ = (
-        CheckConstraint('level >= 1 AND level <= 63', name='npc_level_range'),
+        CheckConstraint("level >= 1 AND level <= 63", name="npc_level_range"),
     )
+
 
 class Quest(Base):
     __tablename__ = "quests"
@@ -301,14 +365,20 @@ class Quest(Base):
     item_rewards_json = Column(JSONB, default={}, nullable=True)
     reputation_rewards_json = Column(JSONB, default={}, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
 
     quest_giver = relationship("Npc", foreign_keys=[quest_giver_npc_id])
     quest_turnin = relationship("Npc", foreign_keys=[quest_turnin_npc_id])
 
     __table_args__ = (
-        CheckConstraint('required_level >= 1 AND required_level <= 60', name='quest_required_level_range'),
+        CheckConstraint(
+            "required_level >= 1 AND required_level <= 60",
+            name="quest_required_level_range",
+        ),
     )
+
 
 class Spell(Base):
     __tablename__ = "spells"
@@ -330,9 +400,12 @@ class Spell(Base):
     effect_details_json = Column(JSONB, default={}, nullable=True)
     talent_id = Column(String(128), ForeignKey("talents.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
 
     talent = relationship("Talent")
+
 
 class Faction(Base):
     __tablename__ = "factions"
@@ -345,9 +418,12 @@ class Faction(Base):
     crest_url = Column(Text, nullable=True)
     primary_color_hex = Column(String(7), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
 
     npcs = relationship("Npc", back_populates="faction")
+
 
 class Image(Base):
     __tablename__ = "images"
@@ -362,7 +438,7 @@ class Image(Base):
     usage_context = Column(String(64), nullable=False)
     entity_type = Column(String(64), nullable=True)
     entity_id = Column(BigInteger, nullable=True)
-    category_tags = Column(ARRAY(String), default=[], nullable=False) # TEXT[]
+    category_tags = Column(ARRAY(String), default=[], nullable=False)  # TEXT[]
     provenance_notes = Column(Text, nullable=True)
     permissions_level = Column(String(32), default="Public", nullable=False)
     is_animated = Column(Boolean, default=False, nullable=False)
@@ -372,9 +448,13 @@ class Image(Base):
     metadata_json = Column(JSONB, default={}, nullable=True)
     status = Column(String(32), default="active", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
+
 
 # --- Guild Bank Tables (New) ---
+
 
 class GuildBankItem(Base):
     __tablename__ = "guild_bank_items"
@@ -385,27 +465,28 @@ class GuildBankItem(Base):
     category = Column(String(64), default="General", nullable=False)
     location = Column(String(128), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    )
 
     item = relationship("Item", back_populates="bank_entries")
 
-    __table_args__ = (
-        CheckConstraint('count >= 0', name='bank_item_count_positive'),
-    )
+    __table_args__ = (CheckConstraint("count >= 0", name="bank_item_count_positive"),)
+
 
 class GuildBankTransaction(Base):
     __tablename__ = "guild_bank_transactions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     item_id = Column(BigInteger, ForeignKey("items.id"), nullable=False)
-    user_id = Column(BigInteger, nullable=False) # Discord User ID
+    user_id = Column(BigInteger, nullable=False)  # Discord User ID
     transaction_type = Column(Enum(BankTransactionTypeEnum), nullable=False)
     quantity = Column(Integer, nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     notes = Column(Text, nullable=True)
 
-    item = relationship("Item") # Unidirectional link to Item
+    item = relationship("Item")  # Unidirectional link to Item
 
     __table_args__ = (
-        CheckConstraint('quantity > 0', name='transaction_quantity_positive'),
+        CheckConstraint("quantity > 0", name="transaction_quantity_positive"),
     )

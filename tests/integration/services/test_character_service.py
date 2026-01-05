@@ -53,7 +53,7 @@ async def test_duplicate_character_prevention(async_session):
         name="UniqueName",
         race=CharacterRaceEnum.Human,
         class_name=CharacterClassEnum.Mage,
-        roles=[CharacterRoleEnum.DPS],
+        roles=[CharacterRoleEnum.RangedDPS],
         backstory="Unique story",
         trait_1="Smart",
         trait_2="Quick",
@@ -71,7 +71,7 @@ async def test_duplicate_character_prevention(async_session):
         name="UniqueName",  # Same Name
         race=CharacterRaceEnum.Human,
         class_name=CharacterClassEnum.Mage,
-        roles=[CharacterRoleEnum.DPS],
+        roles=[CharacterRoleEnum.RangedDPS],
         backstory="Copycat",
         trait_1="A",
         trait_2="B",

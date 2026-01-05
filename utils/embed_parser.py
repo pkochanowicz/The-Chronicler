@@ -112,6 +112,37 @@ def truncate_field(text: str, max_length: int = 1024) -> str:
     return text[: max_length - 3] + "..."
 
 
+def split_long_text(text: str, max_length: int = 1024) -> List[str]:
+    """Split text into chunks that fit in Discord embed fields."""
+    if not text:
+        return []
+    if len(text) <= max_length:
+        return [text]
+
+    chunks = []
+    remaining = text
+
+    while remaining:
+        if len(remaining) <= max_length:
+            chunks.append(remaining)
+            break
+
+        # Try to split at a sentence boundary (. ! ?)
+        split_pos = max_length
+        for delim in [". ", "! ", "? ", "\n"]:
+            last_delim = remaining[:max_length].rfind(delim)
+            if (
+                last_delim > max_length * 0.7
+            ):  # Only split if we're at least 70% through
+                split_pos = last_delim + len(delim)
+                break
+
+        chunks.append(remaining[:split_pos].rstrip())
+        remaining = remaining[split_pos:].lstrip()
+
+    return chunks
+
+
 def split_quotes(quotes: str) -> List[str]:
     if not quotes:
         return []
@@ -170,7 +201,7 @@ def build_character_embeds(character: Any) -> List[discord.Embed]:
         title=f"{emoji} {stylize_name(character.name)}", color=color
     )
     if character.portrait_url:
-        quick_ref.set_thumbnail(url=character.portrait_url)
+        quick_ref.set_image(url=character.portrait_url)
 
     quick_ref.add_field(
         name="━━━━━━━━━━━━━━━━━━━━",
@@ -196,9 +227,12 @@ def build_character_embeds(character: Any) -> List[discord.Embed]:
 
     # Embed 2: Lore
     lore_embed = discord.Embed(color=color)
-    lore_embed.add_field(
-        name="📜 Backstory", value=truncate_field(character.backstory), inline=False
-    )
+
+    # Split backstory into multiple fields if needed
+    backstory_chunks = split_long_text(character.backstory)
+    for i, chunk in enumerate(backstory_chunks):
+        field_name = "📜 Backstory" if i == 0 else "📜 Backstory (cont.)"
+        lore_embed.add_field(name=field_name, value=chunk, inline=False)
 
     if character.personality:
         lore_embed.add_field(
