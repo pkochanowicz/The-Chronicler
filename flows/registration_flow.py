@@ -519,34 +519,127 @@ class RegistrationFlow(InteractiveFlow):
         try:
             char_create = self.data["valid_model"]
             embed_json = [e.to_dict() for e in self.data["preview_embeds"]]
+            settings = get_settings()
 
             _, session_maker = get_engine_and_session_maker()
             async with session_maker() as session:
                 service = CharacterService(session)
-                created_char = await service.create_character(char_create)
 
-                # Update the embed_json
-                from schemas.db_schemas import Character
-                from sqlalchemy import update
+                # Check if character with this name already exists
+                existing_char = await service.get_character_by_name(char_create.name)
 
-                await session.execute(
-                    update(Character)
-                    .where(Character.id == created_char.id)
-                    .values(embed_json=embed_json)
-                )
-                await session.commit()
+                if existing_char:
+                    # Check if user is owner or officer
+                    user_roles = [r.id for r in self.interaction.user.roles]
+                    is_officer = any(
+                        role_id in user_roles for role_id in settings.OFFICER_ROLE_IDS
+                    )
+                    is_owner = existing_char.discord_user_id == self.interaction.user.id
 
-                # Trigger Discord Thread creation via Webhook Logic
-                char_dict = created_char.model_dump()
-                char_dict["embed_json"] = embed_json
-                char_dict["char_name"] = created_char.name
-                char_dict["discord_name"] = created_char.discord_username
+                    if is_owner or is_officer:
+                        # Update existing character
+                        from models.pydantic_models import CharacterUpdate
 
-                await handle_post_to_recruitment(char_dict, discord_bot=self.bot)
+                        update_data = CharacterUpdate(
+                            discord_user_id=char_create.discord_user_id,
+                            discord_username=char_create.discord_username,
+                            race=char_create.race,
+                            class_name=char_create.class_name,
+                            roles=char_create.roles,
+                            professions=char_create.professions,
+                            backstory=char_create.backstory,
+                            personality=char_create.personality,
+                            quotes=char_create.quotes,
+                            portrait_url=char_create.portrait_url,
+                            trait_1=char_create.trait_1,
+                            trait_2=char_create.trait_2,
+                            trait_3=char_create.trait_3,
+                            embed_json=embed_json,
+                        )
 
-            await self.interaction.followup.send(
-                "✨ **SUBMITTED!** Check #recruitment.", ephemeral=True
-            )
+                        created_char = await service.update_character(
+                            existing_char.id, update_data
+                        )
+                        await session.commit()
+
+                        # Update the recruitment message if it exists
+                        if (
+                            existing_char.recruitment_msg_id
+                            and existing_char.forum_post_id
+                        ):
+                            try:
+                                settings = get_settings()
+                                channel = self.bot.get_channel(
+                                    settings.RECRUITMENT_CHANNEL_ID
+                                ) or await self.bot.fetch_channel(
+                                    settings.RECRUITMENT_CHANNEL_ID
+                                )
+
+                                if isinstance(channel, discord.ForumChannel):
+                                    # Get the forum post thread
+                                    thread = self.bot.get_channel(
+                                        existing_char.forum_post_id
+                                    ) or await self.bot.fetch_channel(
+                                        existing_char.forum_post_id
+                                    )
+                                    if thread:
+                                        # Update the starter message with new embeds
+                                        starter_message = await thread.fetch_message(
+                                            existing_char.recruitment_msg_id
+                                        )
+                                        if starter_message:
+                                            # Convert embed_json dicts to Embed objects
+                                            embeds_to_send = [
+                                                discord.Embed.from_dict(e)
+                                                for e in embed_json
+                                            ]
+                                            await starter_message.edit(
+                                                embeds=embeds_to_send
+                                            )
+                            except Exception as e:
+                                logger.error(
+                                    f"Failed to update recruitment message: {e}"
+                                )
+
+                        await self.interaction.followup.send(
+                            f"✨ **UPDATED!** Character '{char_create.name}' has been updated. Check #recruitment.",
+                            ephemeral=True,
+                        )
+                        # Don't call handle_post_to_recruitment for updates - we already updated the message above
+                    else:
+                        # Not owner and not officer - show error
+                        await self.interaction.followup.send(
+                            f"❌ A character named '{char_create.name}' already exists and belongs to another user. "
+                            f"Please choose a different name.",
+                            ephemeral=True,
+                        )
+                        return
+                else:
+                    # Create new character
+                    created_char = await service.create_character(char_create)
+
+                    # Update the embed_json
+                    from schemas.db_schemas import Character
+                    from sqlalchemy import update
+
+                    await session.execute(
+                        update(Character)
+                        .where(Character.id == created_char.id)
+                        .values(embed_json=embed_json)
+                    )
+                    await session.commit()
+
+                    await self.interaction.followup.send(
+                        "✨ **SUBMITTED!** Check #recruitment.", ephemeral=True
+                    )
+
+                    # Trigger Discord Thread creation via Webhook Logic (only for new characters)
+                    char_dict = created_char.model_dump()
+                    char_dict["embed_json"] = embed_json
+                    char_dict["char_name"] = created_char.name
+                    char_dict["discord_name"] = created_char.discord_username
+
+                    await handle_post_to_recruitment(char_dict, discord_bot=self.bot)
 
         except Exception as e:
             logger.error(f"Finalization error: {e}", exc_info=True)

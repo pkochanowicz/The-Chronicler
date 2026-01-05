@@ -91,12 +91,14 @@ async def handle_post_to_recruitment(character_data, discord_bot=None):
         content = f"New Character Registration: {char_name} ({discord_name})\n{' '.join(mentions)}"
 
         message = None
+        forum_thread_id = None
         if isinstance(channel, discord.ForumChannel):
             thread_name = f"[PENDING] {char_name}"
             thread_with_message = await channel.create_thread(
                 name=thread_name, content=content, embed=embeds[0] if embeds else None
             )
             message = thread_with_message.message
+            forum_thread_id = thread_with_message.thread.id
             if len(embeds) > 1:
                 await thread_with_message.thread.send(embeds=embeds[1:])
         else:
@@ -109,13 +111,14 @@ async def handle_post_to_recruitment(character_data, discord_bot=None):
             view = OfficerControlView(bot_instance, int(char_id))
             await message.edit(view=view)
 
-            # Update DB with recruitment message ID if needed
+            # Update DB with recruitment message ID and forum post ID if needed
             _, session_maker = get_engine_and_session_maker()
             async with session_maker() as session:
                 service = CharacterService(session)
-                await service.update_character(
-                    int(char_id), CharacterUpdate(recruitment_msg_id=message.id)
-                )
+                update_data = CharacterUpdate(recruitment_msg_id=message.id)
+                if forum_thread_id:
+                    update_data.forum_post_id = forum_thread_id
+                await service.update_character(int(char_id), update_data)
 
         logger.info(f"✅ Recruitment post created for {char_name}, msg_id={message.id}")
 
