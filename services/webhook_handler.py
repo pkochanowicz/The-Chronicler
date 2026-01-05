@@ -61,14 +61,27 @@ async def handle_webhook(request):
 async def handle_post_to_recruitment(character_data, discord_bot=None):
     bot_instance = discord_bot or bot
     if not bot_instance:
-        logger.error("Bot not initialized")
+        logger.error("Bot not initialized in handle_post_to_recruitment")
         return
 
     try:
-        channel_id = get_settings().RECRUITMENT_CHANNEL_ID
+        settings = get_settings()
+        channel_id = settings.RECRUITMENT_CHANNEL_ID
+        logger.info(f"Attempting to post to recruitment channel ID: {channel_id}")
+
+        if not channel_id or channel_id == 0:
+            logger.error(f"Invalid RECRUITMENT_CHANNEL_ID: {channel_id}")
+            return
+
         channel = bot_instance.get_channel(
             channel_id
         ) or await bot_instance.fetch_channel(channel_id)
+
+        if not channel:
+            logger.error(f"Could not find recruitment channel with ID {channel_id}")
+            return
+
+        logger.info(f"Found channel: {channel.name} (type: {type(channel).__name__})")
 
         embed_json = character_data.get("embed_json", [])
         if isinstance(embed_json, str):
@@ -79,10 +92,10 @@ async def handle_post_to_recruitment(character_data, discord_bot=None):
             embeds = []
 
         mentions = []
-        if get_settings().PATHFINDER_ROLE_MENTION:
-            mentions.append(get_settings().PATHFINDER_ROLE_MENTION)
-        if get_settings().TRAILWARDEN_ROLE_MENTION:
-            mentions.append(get_settings().TRAILWARDEN_ROLE_MENTION)
+        if settings.PATHFINDER_ROLE_MENTION:
+            mentions.append(settings.PATHFINDER_ROLE_MENTION)
+        if settings.TRAILWARDEN_ROLE_MENTION:
+            mentions.append(settings.TRAILWARDEN_ROLE_MENTION)
 
         char_name = character_data.get("name") or character_data.get("char_name")
         discord_name = character_data.get("discord_username") or character_data.get(
@@ -119,8 +132,11 @@ async def handle_post_to_recruitment(character_data, discord_bot=None):
                 if forum_thread_id:
                     update_data.forum_post_id = forum_thread_id
                 await service.update_character(int(char_id), update_data)
+                await session.commit()
 
-        logger.info(f"✅ Recruitment post created for {char_name}, msg_id={message.id}")
+        logger.info(
+            f"✅ Recruitment post created for {char_name}, msg_id={message.id}, forum_post_id={forum_thread_id}"
+        )
 
     except Exception as e:
         logger.error(f"Error in handle_post_to_recruitment: {e}", exc_info=True)

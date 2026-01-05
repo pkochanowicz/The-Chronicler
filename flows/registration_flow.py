@@ -602,7 +602,7 @@ class RegistrationFlow(InteractiveFlow):
                                 )
 
                         await self.interaction.followup.send(
-                            f"✨ **UPDATED!** Character '{char_create.name}' has been updated. Check #recruitment.",
+                            f"✨ **UPDATED!** Character '{char_create.name}' has been updated.",
                             ephemeral=True,
                         )
                         # Don't call handle_post_to_recruitment for updates - we already updated the message above
@@ -630,7 +630,8 @@ class RegistrationFlow(InteractiveFlow):
                     await session.commit()
 
                     await self.interaction.followup.send(
-                        "✨ **SUBMITTED!** Check #recruitment.", ephemeral=True
+                        "✨ **SUBMITTED!** Your character is being posted to recruitment.",
+                        ephemeral=True,
                     )
 
                     # Trigger Discord Thread creation via Webhook Logic (only for new characters)
@@ -639,7 +640,13 @@ class RegistrationFlow(InteractiveFlow):
                     char_dict["char_name"] = created_char.name
                     char_dict["discord_name"] = created_char.discord_username
 
+                    logger.info(
+                        f"Calling handle_post_to_recruitment for character: {created_char.name} (ID: {created_char.id})"
+                    )
                     await handle_post_to_recruitment(char_dict, discord_bot=self.bot)
+                    logger.info(
+                        f"Returned from handle_post_to_recruitment for character: {created_char.name}"
+                    )
 
         except Exception as e:
             logger.error(f"Finalization error: {e}", exc_info=True)
