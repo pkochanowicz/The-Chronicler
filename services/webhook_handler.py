@@ -221,9 +221,10 @@ async def handle_initiate_burial(character_data, discord_bot=None):
 
         if vault_thread:
             try:
-                await vault_thread.edit(archived=True, locked=True)
+                await vault_thread.delete()
+                logger.info(f"Deleted vault thread {thread_id} for {char_name}")
             except Exception as e:
-                logger.warning(f"Could not archive vault thread: {e}")
+                logger.warning(f"Could not delete vault thread: {e}")
 
         # Notify Owner
         user_id = character_data.get("discord_user_id") or character_data.get(
