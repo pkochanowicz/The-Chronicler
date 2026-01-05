@@ -282,7 +282,8 @@ class BurialFlow(InteractiveFlow):
                         f"Initiating burial for {updated_char.name}, forum_post_id={updated_char.forum_post_id}, embed_json present: {bool(updated_char.embed_json)}"
                     )
 
-                    await handle_initiate_burial(char_dict)
+                    # Pass the bot instance from the interaction client
+                    await handle_initiate_burial(char_dict, self.interaction.client)
 
                     await self.interaction.followup.send("⚰️ **THE RITE IS COMPLETE.**")
                 else:

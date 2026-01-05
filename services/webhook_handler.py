@@ -142,8 +142,9 @@ async def handle_post_to_recruitment(character_data, discord_bot=None):
         logger.error(f"Error in handle_post_to_recruitment: {e}", exc_info=True)
 
 
-async def handle_initiate_burial(character_data):
-    if not bot:
+async def handle_initiate_burial(character_data, discord_bot=None):
+    bot_instance = discord_bot or bot
+    if not bot_instance:
         logger.error("Bot not initialized")
         return
 
@@ -171,15 +172,15 @@ async def handle_initiate_burial(character_data):
         vault_thread = None
         if thread_id:
             try:
-                vault_thread = bot.get_channel(
+                vault_thread = bot_instance.get_channel(
                     int(thread_id)
-                ) or await bot.fetch_channel(int(thread_id))
+                ) or await bot_instance.fetch_channel(int(thread_id))
             except Exception:
                 logger.warning(f"Could not fetch vault thread {thread_id}")
 
-        cemetery_channel = bot.get_channel(
+        cemetery_channel = bot_instance.get_channel(
             get_settings().CEMETERY_CHANNEL_ID
-        ) or await bot.fetch_channel(get_settings().CEMETERY_CHANNEL_ID)
+        ) or await bot_instance.fetch_channel(get_settings().CEMETERY_CHANNEL_ID)
 
         char_name = character_data.get("char_name") or character_data.get("name")
         char_class = character_data.get("class") or character_data.get("class_name")
@@ -230,7 +231,9 @@ async def handle_initiate_burial(character_data):
         )
         if user_id:
             try:
-                user = bot.get_user(int(user_id)) or await bot.fetch_user(int(user_id))
+                user = bot_instance.get_user(
+                    int(user_id)
+                ) or await bot_instance.fetch_user(int(user_id))
                 await user.send(
                     f"⚰️ Your character **{char_name}** has been laid to rest in the Cemetery."
                 )
