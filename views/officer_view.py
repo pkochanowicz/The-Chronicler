@@ -64,12 +64,17 @@ class OfficerControlView(View):
             updated_char = await service.update_character(
                 self.character_id, char_update
             )
+            await session.commit()
 
             if not updated_char:
                 await interaction.followup.send(
                     "❌ Character not found in DB.", ephemeral=True
                 )
                 return
+
+            logger.info(
+                f"Character {updated_char.name} (ID: {self.character_id}) approved by {interaction.user.name}"
+            )
 
             vault_channel_id = self.settings.CHARACTER_SHEET_VAULT_CHANNEL_ID
             vault_channel = self.bot.get_channel(
@@ -82,7 +87,19 @@ class OfficerControlView(View):
                 )
                 return
 
-            embeds = interaction.message.embeds if interaction.message else []
+            # Collect ALL embeds from the recruitment thread, not just the starter message
+            all_embeds = []
+            if interaction.channel:
+                # Fetch all messages in the thread to get all embeds
+                async for message in interaction.channel.history(limit=100):
+                    if message.embeds:
+                        all_embeds.extend(message.embeds)
+                # Reverse to get original order (history gives newest first)
+                all_embeds.reverse()
+
+            # Fallback to starter message embeds if thread fetch fails
+            if not all_embeds and interaction.message:
+                all_embeds = interaction.message.embeds
 
             thread_name = (
                 interaction.channel.name.replace("[PENDING]", "[REGISTERED]")
@@ -90,18 +107,44 @@ class OfficerControlView(View):
                 else f"Character {updated_char.name}"
             )
 
-            vault_thread_msg = await vault_channel.create_thread(
-                name=thread_name,
-                content=f"Approved by {interaction.user.mention}",
-                embeds=embeds,
-            )
+            # Post all embeds to vault - first embed in thread creation, rest as follow-up
+            if all_embeds:
+                vault_thread_msg = await vault_channel.create_thread(
+                    name=thread_name,
+                    content=f"Approved by {interaction.user.mention}",
+                    embed=all_embeds[0] if len(all_embeds) > 0 else None,
+                )
+                # Post remaining embeds as follow-up messages
+                if len(all_embeds) > 1:
+                    await vault_thread_msg.thread.send(embeds=all_embeds[1:])
+            else:
+                vault_thread_msg = await vault_channel.create_thread(
+                    name=thread_name,
+                    content=f"Approved by {interaction.user.mention}",
+                )
 
             char_update_2 = CharacterUpdate(forum_post_id=vault_thread_msg.thread.id)
             await service.update_character(self.character_id, char_update_2)
+            await session.commit()
 
+            logger.info(
+                f"Posted {len(all_embeds)} embeds to character-sheet-vault for {updated_char.name}"
+            )
+
+            # Remove buttons from the recruitment message
+            if interaction.message:
+                await interaction.message.edit(view=None)
+                logger.info(
+                    f"Removed buttons from recruitment message for {updated_char.name}"
+                )
+
+            # Lock and archive the recruitment thread
             if interaction.channel:
                 await interaction.channel.edit(
                     locked=True, archived=True, name=f"[APPROVED] {updated_char.name}"
+                )
+                logger.info(
+                    f"Locked and archived recruitment thread for {updated_char.name}"
                 )
 
             try:
@@ -142,13 +185,29 @@ class OfficerControlView(View):
             updated_char = await service.update_character(
                 self.character_id, char_update
             )
+            await session.commit()
 
             if not updated_char:
                 return
 
+            logger.info(
+                f"Character {updated_char.name} (ID: {self.character_id}) rejected by {interaction.user.name}. Reason: {reason}"
+            )
+
+            # Remove buttons from the recruitment message
+            if interaction.message:
+                await interaction.message.edit(view=None)
+                logger.info(
+                    f"Removed buttons from recruitment message for {updated_char.name}"
+                )
+
+            # Lock and archive the recruitment thread
             if interaction.channel:
                 await interaction.channel.edit(
                     locked=True, archived=True, name=f"[REJECTED] {updated_char.name}"
+                )
+                logger.info(
+                    f"Locked and archived recruitment thread for {updated_char.name}"
                 )
 
             try:
