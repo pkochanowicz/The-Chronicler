@@ -270,15 +270,17 @@ class BurialFlow(InteractiveFlow):
                     char_dict = updated_char.model_dump()
                     # Add extra fields needed by handler
                     char_dict["char_name"] = updated_char.name
-                    char_dict[
-                        "forum_post_url"
-                    ] = f"https://discord.com/channels/{self.interaction.guild_id}/{updated_char.forum_post_id}"  # Approximation if we stored ID
 
-                    # Handler usually expects forum_post_url to find the thread.
-                    # We stored 'forum_post_id' in DB.
-                    # We should probably pass the ID directly if handler supports it, or construct a dummy URL.
-                    # Handler logic: `thread_id = int(url.split("/")[-1])`. So passing "foo/123" works.
+                    # Handler expects forum_post_url to extract thread_id
+                    # Handler logic: `thread_id = int(url.split("/")[-1])`. So passing "dummy/123" works.
                     char_dict["forum_post_url"] = f"dummy/{updated_char.forum_post_id}"
+
+                    # Ensure discord_user_id is included for DM notification
+                    char_dict["discord_user_id"] = updated_char.discord_user_id
+
+                    logger.info(
+                        f"Initiating burial for {updated_char.name}, forum_post_id={updated_char.forum_post_id}, embed_json present: {bool(updated_char.embed_json)}"
+                    )
 
                     await handle_initiate_burial(char_dict)
 
@@ -302,6 +304,6 @@ class LongTextModal(Modal):
             style=discord.TextStyle.paragraph,
             max_length=1024,
             placeholder=placeholder,
-            required=True,
+            required=False,
         )
         self.add_item(self.text_input)

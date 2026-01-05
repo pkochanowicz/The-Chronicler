@@ -50,6 +50,10 @@ class CharacterUpdate(BaseModel):
     status: Optional[CharacterStatusEnum] = None
     is_confirmed: Optional[bool] = None
     request_sdxl: Optional[bool] = None
+    recruitment_msg_id: Optional[int] = None
+    forum_post_id: Optional[int] = None
+    death_cause: Optional[str] = None
+    death_story: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)
 

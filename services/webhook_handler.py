@@ -195,6 +195,10 @@ async def handle_initiate_burial(character_data):
         )
 
         embed_json = character_data.get("embed_json", [])
+        logger.info(
+            f"Burial: embed_json type={type(embed_json)}, value={'<present>' if embed_json else '<empty>'}"
+        )
+
         if isinstance(embed_json, str):
             original_embeds = parse_embed_json(embed_json)
         elif isinstance(embed_json, list):
@@ -203,7 +207,10 @@ async def handle_initiate_burial(character_data):
             original_embeds = []
 
         if original_embeds:
+            logger.info(f"Sending {len(original_embeds)} embed(s) to cemetery thread")
             await cemetery_thread_msg.thread.send(embeds=original_embeds)
+        else:
+            logger.warning(f"No embeds to send to cemetery for {char_name}")
 
         death_story = character_data.get("death_story", "Fell in battle.")
         if death_story:
