@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     CHARACTER_SHEET_VAULT_CHANNEL_ID: int
     CEMETERY_CHANNEL_ID: int
 
+    # Forum Tag IDs (required for forum channels that mandate tags)
+    RECRUITMENT_DEFAULT_TAG_ID: Optional[int] = None
+    CEMETERY_DEFAULT_TAG_ID: Optional[int] = None
+
     # Guild Member Role IDs
     WANDERER_ROLE_ID: int = 0
     SEEKER_ROLE_ID: int = 0

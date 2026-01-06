@@ -107,8 +107,19 @@ async def handle_post_to_recruitment(character_data, discord_bot=None):
         forum_thread_id = None
         if isinstance(channel, discord.ForumChannel):
             thread_name = f"[PENDING] {char_name}"
+
+            # Prepare applied_tags if default tag is configured
+            applied_tags = []
+            if settings.RECRUITMENT_DEFAULT_TAG_ID:
+                applied_tags.append(
+                    discord.Object(id=settings.RECRUITMENT_DEFAULT_TAG_ID)
+                )
+
             thread_with_message = await channel.create_thread(
-                name=thread_name, content=content, embed=embeds[0] if embeds else None
+                name=thread_name,
+                content=content,
+                embed=embeds[0] if embeds else None,
+                applied_tags=applied_tags if applied_tags else discord.utils.MISSING,
             )
             message = thread_with_message.message
             forum_thread_id = thread_with_message.thread.id
@@ -189,10 +200,18 @@ async def handle_initiate_burial(character_data, discord_bot=None):
 
         cemetery_embed = build_cemetery_embed(char_name, str(char_class))
 
+        # Prepare applied_tags if default tag is configured
+        applied_tags = []
+        if get_settings().CEMETERY_DEFAULT_TAG_ID:
+            applied_tags.append(
+                discord.Object(id=get_settings().CEMETERY_DEFAULT_TAG_ID)
+            )
+
         cemetery_thread_msg = await cemetery_channel.create_thread(
             name=f"⚰️ {char_name}",
             content=f"**Here rests {char_name}, whose tale has reached its end.**",
             embed=cemetery_embed,
+            applied_tags=applied_tags if applied_tags else discord.utils.MISSING,
         )
 
         embed_json = character_data.get("embed_json", [])
