@@ -141,7 +141,7 @@ Currently defined in `schemas/db_schemas.py`:
 - `talent_trees` and `talents` tables: **KEEP**
 - These are static (~500 talents total) and essential for `/talent audit`
 - Changes infrequently (only with major patches)
-- **Action:** Populate from Google Sheets as currently done
+- **Action:** Populate from static data files or external API
 
 **2. Remove/Depopulate Game Data Tables** ⚠️
 - `items`, `npcs`, `quests`, `spells`, `factions`: **REMOVE or leave empty**

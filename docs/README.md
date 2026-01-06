@@ -39,13 +39,14 @@ Death is part of the journey. When a hero falls, officers perform the **Burial R
 - **The Cemetery:** Automatically moves character records to the `#cemetery` channel.
 - **Eulogies:** Allows officers to inscribe final words for the fallen.
 
-### ⚡ The Arcane Link (Webhooks)
+### ⚡ The Arcane Link (Modern Architecture)
 
-Built on the **Path B Architecture**:
+Built on a **modern, scalable architecture**:
 
-- **Zero Polling:** Changes in our Master Google Sheet reflect instantly in Discord.
-- **Single Source of Truth:** Your spreadsheet is the database. The bot is the interface.
-- **Reliable Automation:** Powered by Google Apps Script triggers.
+- **PostgreSQL Database:** Reliable data storage with async SQLAlchemy ORM.
+- **Cloudflare R2:** Permanent image storage for character portraits and assets.
+- **MCP Integration:** External discord-guildmaster-mcp server for AI-powered features.
+- **FastAPI Webhooks:** Real-time Discord event processing.
 
 ---
 
@@ -61,14 +62,14 @@ The Chronicler is built with modern, production-grade standards.
 ### Quick Start
 
 1. **Clone the Chronicle:**
-   
+
    ```bash
    git clone https://github.com/pkochanowicz/the_chronicler.git
    cd the_chronicler
    ```
 
 2. **Summon the Dependencies:**
-   
+
    ```bash
    poetry install
    # OR
@@ -76,7 +77,7 @@ The Chronicler is built with modern, production-grade standards.
    ```
 
 3. **Awaken the Spirit:**
-   
+
    ```bash
    # Ensure .env is populated (see .env.example)
    poetry run python main.py
@@ -91,6 +92,7 @@ The Chronicler is built with modern, production-grade standards.
 - [**User Guide**](./USER_GUIDE.md) - *For the heroes of the guild.*
 - [**Technical Manual**](./TECHNICAL.md) - *For the goblins and gnomes engineering the backend.*
 - [**Deployment Guide**](./DEPLOYMENT_GUIDE.md) - *Instructions for hosting on Fly.io.*
+- [**R2 Setup Guide**](./R2_SETUP.md) - *Simple setup for Cloudflare R2 image storage.*
 - [**Agent Selection Guide**](./Agents.md) - *For AI assistants working on this project.*
 
 ---

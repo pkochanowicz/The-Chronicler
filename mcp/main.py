@@ -2,7 +2,6 @@ import asyncio
 import logging
 from dotenv import load_dotenv
 
-# from services.sheets_service import google_sheets_service # Temporarily commented out
 from mcp.server import run_mcp_server
 
 # Configure logging

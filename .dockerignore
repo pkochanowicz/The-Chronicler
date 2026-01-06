@@ -26,9 +26,9 @@ client_secret.json
 .coverage
 htmlcov/
 TESTING_RESULTS.md
-tests/
+# tests/  # Re-enabled for build-time testing in Dockerfile
 # We might want tests in the build for multi-stage, but usually not in the final image.
-# Keeping them out for speed unless needed.
+# Keeping them in for build-time verification.
 
 # Documentation & large assets
 docs/

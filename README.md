@@ -86,6 +86,7 @@ The Chronicler is built with modern, production-grade standards.
 - [**User Guide**](./docs/USER_GUIDE.md) - *For the heroes of the guild.*
 - [**Technical Manual**](./docs/TECHNICAL.md) - *For the goblins and gnomes engineering the backend.*
 - [**Deployment Guide**](./docs/DEPLOYMENT_GUIDE.md) - *Instructions for hosting on Fly.io.*
+- [**R2 Setup Guide**](./docs/R2_SETUP.md) - *Simple setup for Cloudflare R2 image storage.*
 - [**Test Suite**](./docs/TEST_SUITE.md) - *Protocols for quality assurance.*
 
 ---

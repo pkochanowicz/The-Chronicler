@@ -17,7 +17,7 @@ The Chronicler operates across **10 distinct channels**, each mapped to specific
 | `#cemetery` | Forum | Public | Memorials for fallen heroes. | `/bury` -> **New Thread** |
 | `#vault` | Forum | Public | Rare items, lore artifacts. | Manual / Auto-promoted Items |
 | `#journal` | Forum | Public | Database search results. | `/db_search` -> **New Thread** |
-| `#graphics_vault` | Forum | Hidden | Image asset storage (CDN). | `post_image_to_graphics_storage` -> **New Thread** |
+| ~~`#graphics_vault`~~ | ~~Forum~~ | ~~Hidden~~ | **DEPRECATED:** Image storage now handled by Cloudflare R2. | See `services/image_storage.py` |
 
 ## 2. Interactive Flows
 

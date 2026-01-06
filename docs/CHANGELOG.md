@@ -5,6 +5,27 @@ All notable changes to **The Chronicler** project will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-01-06 "Forum Forgemaster"
+
+### 🐛 Bug Fixes
+- **Environment Configuration:** Fixed typo in local `.env` file (`CEMETARY_DEFAULT_TAG_ID` → `CEMETERY_DEFAULT_TAG_ID`)
+- **Forum Tag Support:** Verified and validated forum tag application for all three forum channels (Recruitment, Character Sheet Vault, Cemetery)
+
+### 🔧 Configuration & Deployment
+- **Production Environment:** Confirmed fly.io secrets contain correct `CEMETERY_DEFAULT_TAG_ID` variable
+- **Bot Permissions:** Documented required Discord bot permissions for forum operations (Create Public Threads, Manage Threads, Send Messages in Threads)
+- **Bot Intents:** Verified correct configuration of Discord intents (guilds, members, message_content, reactions)
+
+### 📘 Documentation
+- **Permission Requirements:** Added comprehensive documentation for Discord bot permission requirements across all forum channels
+- **Forum Operations:** Validated forum post creation workflow for `/register_character`, accept/reject character sheets, and `/bury` commands
+
+### 🏗️ Architecture
+- **Forum Tag Integration:** Enhanced forum thread creation to properly apply default tags for recruitment and cemetery channels
+- **Error Handling:** Improved forum operation error detection and logging capabilities
+
+---
+
 ## [1.2.6] - 2025-12-22 "The Singing Steel"
 
 ### ⚔️ Major Feature: Guild Bank System
