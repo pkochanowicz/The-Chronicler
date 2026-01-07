@@ -31,30 +31,41 @@ from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class UploadResult:
     """Result of an image upload."""
+
     url: str
     key: str
     size: int
     filename: str
     content_type: str
 
+
 class ImageStorageError(Exception):
     """Base exception for image storage errors."""
+
     pass
+
 
 class ImageTooLargeError(ImageStorageError):
     """Image exceeds reasonable size limit."""
+
     pass
+
 
 class BucketNotFoundError(ImageStorageError):
     """R2 bucket not found or inaccessible."""
+
     pass
+
 
 class UploadFailedError(ImageStorageError):
     """Upload to R2 failed."""
+
     pass
+
 
 class ImageStorage:
     """
@@ -71,11 +82,11 @@ class ImageStorage:
     MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
 
     ALLOWED_CONTENT_TYPES = {
-        'image/jpeg': 'jpg',
-        'image/png': 'png',
-        'image/gif': 'gif',
-        'image/webp': 'webp',
-        'image/svg+xml': 'svg'
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/gif": "gif",
+        "image/webp": "webp",
+        "image/svg+xml": "svg",
     }
 
     def __init__(
@@ -84,25 +95,22 @@ class ImageStorage:
         access_key_id: str,
         secret_access_key: str,
         bucket_name: str,
-        public_url: str
+        public_url: str,
     ):
         self.bucket_name = bucket_name
-        self.public_url = public_url.rstrip('/')
+        self.public_url = public_url.rstrip("/")
 
         # Create S3 client configured for R2
         self.s3_client = boto3.client(
-            's3',
-            endpoint_url=f'https://{account_id}.r2.cloudflarestorage.com',
+            "s3",
+            endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
             aws_access_key_id=access_key_id,
             aws_secret_access_key=secret_access_key,
-            region_name='auto'  # R2 uses 'auto' region
+            region_name="auto",  # R2 uses 'auto' region
         )
 
     async def upload(
-        self,
-        image_bytes: bytes,
-        filename: str,
-        metadata: Optional[Dict] = None
+        self, image_bytes: bytes, filename: str, metadata: Optional[Dict] = None
     ) -> UploadResult:
         """
         Upload image to R2 and return permanent URL.
@@ -148,33 +156,31 @@ class ImageStorage:
                 Body=image_bytes,
                 ContentType=content_type,
                 Metadata=s3_metadata,
-                CacheControl='public, max-age=31536000'  # 1 year cache
+                CacheControl="public, max-age=31536000",  # 1 year cache
             )
 
             # Construct public URL
             url = f"{self.public_url}/{key}"
 
-            logger.info(
-                f"Image uploaded to R2: {filename} ({size_mb:.2f}MB) -> {url}"
-            )
+            logger.info(f"Image uploaded to R2: {filename} ({size_mb:.2f}MB) -> {url}")
 
             return UploadResult(
                 url=url,
                 key=key,
                 size=len(image_bytes),
                 filename=filename,
-                content_type=content_type
+                content_type=content_type,
             )
 
         except ClientError as e:
-            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+            error_code = e.response.get("Error", {}).get("Code", "Unknown")
 
-            if error_code == 'NoSuchBucket':
+            if error_code == "NoSuchBucket":
                 raise BucketNotFoundError(
                     f"Bucket '{self.bucket_name}' not found. Check R2 configuration."
                 )
 
-            if error_code == 'AccessDenied':
+            if error_code == "AccessDenied":
                 raise UploadFailedError(
                     "Access denied. Check R2 API credentials and permissions."
                 )
@@ -196,15 +202,13 @@ class ImageStorage:
         """
         try:
             await asyncio.to_thread(
-                self.s3_client.delete_object,
-                Bucket=self.bucket_name,
-                Key=key
+                self.s3_client.delete_object, Bucket=self.bucket_name, Key=key
             )
             logger.info(f"Deleted image from R2: {key}")
             return True
 
         except ClientError as e:
-            logger.error(f"Failed to delete {key} from R2: {e}")
+            logger.error(f"Failed to delete {key} from R2: {e}")  # nosec B608
             return False
 
     async def get_metadata(self, key: str) -> Optional[Dict]:
@@ -219,26 +223,21 @@ class ImageStorage:
         """
         try:
             response = await asyncio.to_thread(
-                self.s3_client.head_object,
-                Bucket=self.bucket_name,
-                Key=key
+                self.s3_client.head_object, Bucket=self.bucket_name, Key=key
             )
 
             return {
-                'size': response.get('ContentLength'),
-                'content_type': response.get('ContentType'),
-                'last_modified': response.get('LastModified'),
-                'metadata': response.get('Metadata', {})
+                "size": response.get("ContentLength"),
+                "content_type": response.get("ContentType"),
+                "last_modified": response.get("LastModified"),
+                "metadata": response.get("Metadata", {}),
             }
 
         except ClientError:
             return None
 
     async def upload_with_fallback(
-        self,
-        image_bytes: bytes,
-        filename: str,
-        metadata: Optional[Dict] = None
+        self, image_bytes: bytes, filename: str, metadata: Optional[Dict] = None
     ) -> str:
         """
         Upload with graceful fallback to default portrait.
@@ -265,34 +264,34 @@ class ImageStorage:
     def _detect_content_type(self, image_bytes: bytes, filename: str) -> str:
         """Detect content type from magic bytes or filename."""
         # Check magic bytes
-        if image_bytes.startswith(b'\xff\xd8\xff'):
-            return 'image/jpeg'
-        elif image_bytes.startswith(b'\x89PNG'):
-            return 'image/png'
-        elif image_bytes.startswith(b'GIF87a') or image_bytes.startswith(b'GIF89a'):
-            return 'image/gif'
-        elif image_bytes.startswith(b'RIFF') and b'WEBP' in image_bytes[:12]:
-            return 'image/webp'
-        elif image_bytes.startswith(b'<svg') or image_bytes.startswith(b'<?xml'):
-            return 'image/svg+xml'
+        if image_bytes.startswith(b"\xff\xd8\xff"):
+            return "image/jpeg"
+        elif image_bytes.startswith(b"\x89PNG"):
+            return "image/png"
+        elif image_bytes.startswith(b"GIF87a") or image_bytes.startswith(b"GIF89a"):
+            return "image/gif"
+        elif image_bytes.startswith(b"RIFF") and b"WEBP" in image_bytes[:12]:
+            return "image/webp"
+        elif image_bytes.startswith(b"<svg") or image_bytes.startswith(b"<?xml"):
+            return "image/svg+xml"
 
         # Fallback to filename extension
-        ext = filename.lower().rsplit('.', 1)[-1]
+        ext = filename.lower().rsplit(".", 1)[-1]
         ext_map = {
-            'jpg': 'image/jpeg',
-            'jpeg': 'image/jpeg',
-            'png': 'image/png',
-            'gif': 'image/gif',
-            'webp': 'image/webp',
-            'svg': 'image/svg+xml'
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+            "gif": "image/gif",
+            "webp": "image/webp",
+            "svg": "image/svg+xml",
         }
-        return ext_map.get(ext, 'application/octet-stream')
+        return ext_map.get(ext, "application/octet-stream")
 
     def _get_extension(self, filename: str, content_type: str) -> str:
         """Get file extension from filename or content type."""
-        if '.' in filename:
-            return filename.lower().rsplit('.', 1)[-1]
-        return self.ALLOWED_CONTENT_TYPES.get(content_type, 'bin')
+        if "." in filename:
+            return filename.lower().rsplit(".", 1)[-1]
+        return self.ALLOWED_CONTENT_TYPES.get(content_type, "bin")
 
     def _generate_key(self, filename: str, ext: str, metadata: Optional[Dict]) -> str:
         """
@@ -301,11 +300,13 @@ class ImageStorage:
         Pattern: {context}/{year}/{month}/{uuid}_{sanitized_filename}.{ext}
         Example: portraits/2025/12/a1b2c3d4-e5f6_thorgar.png
         """
-        context = metadata.get('context', 'general') if metadata else 'general'
+        context = metadata.get("context", "general") if metadata else "general"
         now = datetime.utcnow()
 
         # Sanitize filename (keep only alphanumeric and underscores)
-        safe_name = ''.join(c if c.isalnum() or c in '_-' else '_' for c in filename.rsplit('.', 1)[0])
+        safe_name = "".join(
+            c if c.isalnum() or c in "_-" else "_" for c in filename.rsplit(".", 1)[0]
+        )
         safe_name = safe_name[:50]  # Limit length
 
         # Generate unique ID
@@ -325,8 +326,10 @@ class ImageStorage:
 
         return s3_metadata
 
+
 # Singleton instance
 _storage_instance: Optional[ImageStorage] = None
+
 
 def get_image_storage() -> ImageStorage:
     """Get or create the global ImageStorage instance."""
@@ -337,6 +340,6 @@ def get_image_storage() -> ImageStorage:
             access_key_id=settings.R2_ACCESS_KEY_ID,
             secret_access_key=settings.R2_SECRET_ACCESS_KEY,
             bucket_name=settings.R2_BUCKET_NAME,
-            public_url=settings.R2_PUBLIC_URL
+            public_url=settings.R2_PUBLIC_URL,
         )
     return _storage_instance

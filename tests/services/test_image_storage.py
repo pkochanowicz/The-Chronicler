@@ -25,7 +25,7 @@ from services.image_storage import (
     ImageTooLargeError,
     BucketNotFoundError,
     UploadFailedError,
-    UploadResult
+    UploadResult,
 )
 from config.settings import settings
 
@@ -33,7 +33,7 @@ from config.settings import settings
 @pytest.fixture
 def mock_r2_client():
     """Mock boto3 S3 client for R2."""
-    with patch('services.image_storage.boto3.client') as mock_client:
+    with patch("services.image_storage.boto3.client") as mock_client:
         yield mock_client.return_value
 
 
@@ -45,7 +45,7 @@ def image_storage(mock_r2_client):
         access_key_id="test_key",
         secret_access_key="test_secret",
         bucket_name="test-bucket",
-        public_url="https://test.r2.dev"
+        public_url="https://test.r2.dev",
     )
 
 
@@ -57,16 +57,14 @@ class TestImageStorageUpload:
         """Test successful PNG upload."""
         # 1x1 pixel PNG
         test_png = (
-            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
-            b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde'
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+            b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde"
         )
 
         mock_r2_client.put_object = MagicMock()
 
         result = await image_storage.upload(
-            image_bytes=test_png,
-            filename="test.png",
-            metadata={"context": "portraits"}
+            image_bytes=test_png, filename="test.png", metadata={"context": "portraits"}
         )
 
         assert isinstance(result, UploadResult)
@@ -78,7 +76,7 @@ class TestImageStorageUpload:
     @pytest.mark.asyncio
     async def test_upload_too_large(self, image_storage):
         """Test that images exceeding size limit are rejected."""
-        huge_image = b'x' * (101 * 1024 * 1024)  # 101 MB
+        huge_image = b"x" * (101 * 1024 * 1024)  # 101 MB
 
         with pytest.raises(ImageTooLargeError) as exc_info:
             await image_storage.upload(huge_image, "huge.png")
@@ -89,7 +87,7 @@ class TestImageStorageUpload:
     @pytest.mark.asyncio
     async def test_upload_unsupported_format(self, image_storage):
         """Test that unsupported image formats are rejected."""
-        fake_data = b'This is not an image'
+        fake_data = b"This is not an image"
 
         with pytest.raises(ImageStorageError) as exc_info:
             await image_storage.upload(fake_data, "test.txt")
@@ -99,7 +97,7 @@ class TestImageStorageUpload:
     @pytest.mark.asyncio
     async def test_upload_with_fallback_success(self, image_storage, mock_r2_client):
         """Test upload_with_fallback returns URL on success."""
-        test_png = b'\x89PNG\r\n\x1a\n' + b'\x00' * 20
+        test_png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 20
         mock_r2_client.put_object = MagicMock()
 
         url = await image_storage.upload_with_fallback(test_png, "test.png")
@@ -110,7 +108,7 @@ class TestImageStorageUpload:
     @pytest.mark.asyncio
     async def test_upload_with_fallback_on_error(self, image_storage):
         """Test upload_with_fallback returns default URL on error."""
-        huge_image = b'x' * (101 * 1024 * 1024)
+        huge_image = b"x" * (101 * 1024 * 1024)
 
         url = await image_storage.upload_with_fallback(huge_image, "huge.png")
 
@@ -123,21 +121,21 @@ class TestImageStorageContentTypeDetection:
     @pytest.mark.asyncio
     async def test_detect_png(self, image_storage):
         """Test PNG detection from magic bytes."""
-        png_bytes = b'\x89PNG\r\n\x1a\n' + b'\x00' * 20
+        png_bytes = b"\x89PNG\r\n\x1a\n" + b"\x00" * 20
         content_type = image_storage._detect_content_type(png_bytes, "unknown.bin")
         assert content_type == "image/png"
 
     @pytest.mark.asyncio
     async def test_detect_jpeg(self, image_storage):
         """Test JPEG detection from magic bytes."""
-        jpeg_bytes = b'\xff\xd8\xff' + b'\x00' * 20
+        jpeg_bytes = b"\xff\xd8\xff" + b"\x00" * 20
         content_type = image_storage._detect_content_type(jpeg_bytes, "unknown.bin")
         assert content_type == "image/jpeg"
 
     @pytest.mark.asyncio
     async def test_detect_gif(self, image_storage):
         """Test GIF detection from magic bytes."""
-        gif_bytes = b'GIF89a' + b'\x00' * 20
+        gif_bytes = b"GIF89a" + b"\x00" * 20
         content_type = image_storage._detect_content_type(gif_bytes, "unknown.bin")
         assert content_type == "image/gif"
 
@@ -148,9 +146,7 @@ class TestImageStorageKeyGeneration:
     def test_generate_key_with_context(self, image_storage):
         """Test key includes context from metadata."""
         key = image_storage._generate_key(
-            filename="thorgar.png",
-            ext="png",
-            metadata={"context": "portraits"}
+            filename="thorgar.png", ext="png", metadata={"context": "portraits"}
         )
 
         assert key.startswith("portraits/")
@@ -160,9 +156,7 @@ class TestImageStorageKeyGeneration:
     def test_generate_key_sanitizes_filename(self, image_storage):
         """Test that special characters are sanitized."""
         key = image_storage._generate_key(
-            filename="test@#$%.png",
-            ext="png",
-            metadata={}
+            filename="test@#$%.png", ext="png", metadata={}
         )
 
         # Special chars should be replaced with underscores
@@ -180,11 +174,10 @@ class TestImageStorageErrorHandling:
         from botocore.exceptions import ClientError
 
         mock_r2_client.put_object.side_effect = ClientError(
-            {"Error": {"Code": "NoSuchBucket"}},
-            "PutObject"
+            {"Error": {"Code": "NoSuchBucket"}}, "PutObject"
         )
 
-        test_png = b'\x89PNG\r\n\x1a\n' + b'\x00' * 20
+        test_png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 20
 
         with pytest.raises(BucketNotFoundError):
             await image_storage.upload(test_png, "test.png")
@@ -195,11 +188,10 @@ class TestImageStorageErrorHandling:
         from botocore.exceptions import ClientError
 
         mock_r2_client.put_object.side_effect = ClientError(
-            {"Error": {"Code": "AccessDenied"}},
-            "PutObject"
+            {"Error": {"Code": "AccessDenied"}}, "PutObject"
         )
 
-        test_png = b'\x89PNG\r\n\x1a\n' + b'\x00' * 20
+        test_png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 20
 
         with pytest.raises(UploadFailedError) as exc_info:
             await image_storage.upload(test_png, "test.png")

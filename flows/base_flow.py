@@ -18,19 +18,21 @@
 Base Interactive Flow
 Common logic for multi-step interactive commands.
 """
+
 import discord
 from config.settings import get_settings
 
+
 class InteractiveFlow:
     """Base class for interactive flows."""
-    
+
     def __init__(self, interaction: discord.Interaction):
         self.interaction = interaction
         self.user = interaction.user
         self.bot = interaction.client
         self.timeout = get_settings().INTERACTIVE_TIMEOUT_SECONDS
         self.data = {}
-        self.message = None # The message we are updating/using for UI
+        self.message = None  # The message we are updating/using for UI
 
     async def start(self):
         """Start the flow."""
@@ -44,7 +46,7 @@ class InteractiveFlow:
         # "Bot: ... [User types] ... Bot: ..."
         # So we should send NEW messages for each step narration.
         # But for UI components (Dropdowns), we might attach them to the bot message.
-        
+
         # We generally use followup.send for the first message (since interaction is deferred or initially responded).
         if not self.interaction.response.is_done():
             await self.interaction.response.send_message(**kwargs)
@@ -55,16 +57,25 @@ class InteractiveFlow:
 
     async def wait_for_message(self, timeout=None):
         """Wait for a text message from the user."""
+
         def check(m):
-            return m.author.id == self.user.id and m.channel.id == self.interaction.channel_id
-        
-        return await self.bot.wait_for('message', check=check, timeout=timeout or self.timeout)
+            return (
+                m.author.id == self.user.id
+                and m.channel.id == self.interaction.channel_id
+            )
+
+        return await self.bot.wait_for(
+            "message", check=check, timeout=timeout or self.timeout
+        )
 
     async def wait_for_component(self, component_type=None, timeout=None):
         """Wait for a component interaction (button/select)."""
+
         def check(i):
             is_user = i.user.id == self.user.id
             is_msg = i.message.id == self.message.id
             return is_user and is_msg
-        
-        return await self.bot.wait_for('interaction', check=check, timeout=timeout or self.timeout)
+
+        return await self.bot.wait_for(
+            "interaction", check=check, timeout=timeout or self.timeout
+        )

@@ -2,6 +2,7 @@
 """
 Validators for domain models and fields.
 """
+
 from typing import List, Dict, Union
 import re
 from domain.talent_data import TALENT_DATA

@@ -18,6 +18,7 @@
 Azeroth Bound Bot - Entry Point
 Main entry point for the Discord bot with FastAPI integration.
 """
+
 import asyncio
 import os
 import logging

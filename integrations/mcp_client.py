@@ -31,25 +31,34 @@ from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class WorkflowResponse:
     """Response from MCP workflow trigger."""
+
     success: bool
     workflow_id: Optional[str] = None
     message: str = ""
     error: Optional[str] = None
 
+
 class MCPConnectionError(Exception):
     """Failed to connect to MCP server."""
+
     pass
+
 
 class MCPAuthenticationError(Exception):
     """API key authentication failed."""
+
     pass
+
 
 class MCPWorkflowError(Exception):
     """Workflow execution failed."""
+
     pass
+
 
 class MCPWorkflowTrigger:
     """
@@ -66,7 +75,7 @@ class MCPWorkflowTrigger:
         self,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        timeout: int = 30
+        timeout: int = 30,
     ):
         """
         Initialize MCP client.
@@ -76,7 +85,9 @@ class MCPWorkflowTrigger:
             api_key: API key for authentication (default: from settings)
             timeout: Request timeout in seconds
         """
-        self.base_url = (base_url or f"http://localhost:{settings.MCP_PORT}").rstrip('/')
+        self.base_url = (base_url or f"http://localhost:{settings.MCP_PORT}").rstrip(
+            "/"
+        )
         self.api_key = api_key or settings.MCP_API_KEY
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.session: Optional[aiohttp.ClientSession] = None
@@ -92,10 +103,7 @@ class MCPWorkflowTrigger:
             await self.session.close()
 
     async def _make_request(
-        self,
-        endpoint: str,
-        payload: Dict[str, Any],
-        method: str = "POST"
+        self, endpoint: str, payload: Dict[str, Any], method: str = "POST"
     ) -> Dict[str, Any]:
         """
         Make authenticated request to MCP server.
@@ -117,13 +125,12 @@ class MCPWorkflowTrigger:
             self.session = aiohttp.ClientSession(timeout=self.timeout)
 
         url = f"{self.base_url}{endpoint}"
-        headers = {
-            "Content-Type": "application/json",
-            "X-API-Key": self.api_key
-        }
+        headers = {"Content-Type": "application/json", "X-API-Key": self.api_key}
 
         try:
-            async with self.session.request(method, url, json=payload, headers=headers) as resp:
+            async with self.session.request(
+                method, url, json=payload, headers=headers
+            ) as resp:
                 # Handle authentication errors
                 if resp.status == 401 or resp.status == 403:
                     raise MCPAuthenticationError(
@@ -141,15 +148,10 @@ class MCPWorkflowTrigger:
                 return await resp.json()
 
         except aiohttp.ClientError as e:
-            raise MCPConnectionError(
-                f"Failed to connect to MCP server at {url}: {e}"
-            )
+            raise MCPConnectionError(f"Failed to connect to MCP server at {url}: {e}")
 
     async def trigger_character_welcome(
-        self,
-        member_id: str,
-        guild_id: str,
-        character_data: Dict[str, Any]
+        self, member_id: str, guild_id: str, character_data: Dict[str, Any]
     ) -> WorkflowResponse:
         """
         Trigger AI-powered welcome message workflow for new character.
@@ -187,8 +189,8 @@ class MCPWorkflowTrigger:
                 payload={
                     "member_id": member_id,
                     "guild_id": guild_id,
-                    "character": character_data
-                }
+                    "character": character_data,
+                },
             )
 
             logger.info(
@@ -199,20 +201,15 @@ class MCPWorkflowTrigger:
             return WorkflowResponse(
                 success=True,
                 workflow_id=result.get("workflow_id"),
-                message=result.get("message", "Workflow triggered successfully")
+                message=result.get("message", "Workflow triggered successfully"),
             )
 
         except (MCPConnectionError, MCPAuthenticationError, MCPWorkflowError) as e:
             logger.error(f"Failed to trigger character welcome: {e}")
-            return WorkflowResponse(
-                success=False,
-                error=str(e)
-            )
+            return WorkflowResponse(success=False, error=str(e))
 
     async def trigger_event_announcement(
-        self,
-        event_data: Dict[str, Any],
-        generate_banner: bool = False
+        self, event_data: Dict[str, Any], generate_banner: bool = False
     ) -> WorkflowResponse:
         """
         Trigger AI-powered event announcement with optional ComfyUI banner.
@@ -246,10 +243,7 @@ class MCPWorkflowTrigger:
         try:
             result = await self._make_request(
                 endpoint="/webhooks/event-announcement",
-                payload={
-                    "event": event_data,
-                    "generate_banner": generate_banner
-                }
+                payload={"event": event_data, "generate_banner": generate_banner},
             )
 
             logger.info(
@@ -260,21 +254,15 @@ class MCPWorkflowTrigger:
             return WorkflowResponse(
                 success=True,
                 workflow_id=result.get("workflow_id"),
-                message=result.get("message", "Event announcement triggered")
+                message=result.get("message", "Event announcement triggered"),
             )
 
         except (MCPConnectionError, MCPAuthenticationError, MCPWorkflowError) as e:
             logger.error(f"Failed to trigger event announcement: {e}")
-            return WorkflowResponse(
-                success=False,
-                error=str(e)
-            )
+            return WorkflowResponse(success=False, error=str(e))
 
     async def request_channel_summary(
-        self,
-        channel_id: str,
-        hours: int = 24,
-        format: str = "bullet"
+        self, channel_id: str, hours: int = 24, format: str = "bullet"
     ) -> WorkflowResponse:
         """
         Request AI summary of channel activity.
@@ -304,11 +292,7 @@ class MCPWorkflowTrigger:
         try:
             result = await self._make_request(
                 endpoint="/webhooks/channel-summary",
-                payload={
-                    "channel_id": channel_id,
-                    "hours": hours,
-                    "format": format
-                }
+                payload={"channel_id": channel_id, "hours": hours, "format": format},
             )
 
             logger.info(
@@ -319,20 +303,15 @@ class MCPWorkflowTrigger:
             return WorkflowResponse(
                 success=True,
                 workflow_id=result.get("workflow_id"),
-                message=result.get("summary", "")
+                message=result.get("summary", ""),
             )
 
         except (MCPConnectionError, MCPAuthenticationError, MCPWorkflowError) as e:
             logger.error(f"Failed to request channel summary: {e}")
-            return WorkflowResponse(
-                success=False,
-                error=str(e)
-            )
+            return WorkflowResponse(success=False, error=str(e))
 
     async def trigger_portrait_generation(
-        self,
-        character_id: int,
-        character_data: Dict[str, Any]
+        self, character_id: int, character_data: Dict[str, Any]
     ) -> WorkflowResponse:
         """
         Trigger ComfyUI portrait generation via MCP server.
@@ -369,10 +348,7 @@ class MCPWorkflowTrigger:
         try:
             result = await self._make_request(
                 endpoint="/webhooks/portrait-generation",
-                payload={
-                    "character_id": character_id,
-                    "character": character_data
-                }
+                payload={"character_id": character_id, "character": character_data},
             )
 
             logger.info(
@@ -383,15 +359,12 @@ class MCPWorkflowTrigger:
             return WorkflowResponse(
                 success=True,
                 workflow_id=result.get("workflow_id"),
-                message=result.get("portrait_url", "")
+                message=result.get("portrait_url", ""),
             )
 
         except (MCPConnectionError, MCPAuthenticationError, MCPWorkflowError) as e:
             logger.error(f"Failed to trigger portrait generation: {e}")
-            return WorkflowResponse(
-                success=False,
-                error=str(e)
-            )
+            return WorkflowResponse(success=False, error=str(e))
 
     async def health_check(self) -> bool:
         """
@@ -402,17 +375,17 @@ class MCPWorkflowTrigger:
         """
         try:
             result = await self._make_request(
-                endpoint="/health",
-                payload={},
-                method="GET"
+                endpoint="/health", payload={}, method="GET"
             )
             return result.get("status") == "ok"
 
         except (MCPConnectionError, MCPAuthenticationError, MCPWorkflowError):
             return False
 
+
 # Singleton instance for convenience
 _mcp_client: Optional[MCPWorkflowTrigger] = None
+
 
 def get_mcp_client() -> MCPWorkflowTrigger:
     """Get or create global MCP client instance."""

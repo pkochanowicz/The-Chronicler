@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 import discord
 
+
 @pytest.fixture
 def mock_interaction():
     """
@@ -20,11 +21,12 @@ def mock_interaction():
     interaction.guild.id = 987654321
     interaction.channel = MagicMock(spec=discord.TextChannel)
     interaction.channel.id = 555555555
-    
+
     # Mock client (bot)
     interaction.client = AsyncMock()
-    
+
     return interaction
+
 
 @pytest.fixture
 def mock_discord_context():

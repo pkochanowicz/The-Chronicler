@@ -19,7 +19,7 @@ class TestPostProtection:
     """
     Tests for Discord permission logic ensuring posts are immutable.
     """
-    
+
     def test_thread_permissions(self):
         """
         Verify Discord thread protection strategy per MASTER_BLUEPRINT lines 1017-1072.
@@ -38,11 +38,13 @@ class TestPostProtection:
             "bot_owned": "Messages posted by bot can only be edited by bot or Manage Messages role",
             "channel_perms": "#character-sheet-vault: @everyone cannot Send Messages or Manage Messages",
             "officer_perms": "@Pathfinder, @Trailwarden, @Admin have Manage Messages for /bury command",
-            "optional_locking": "Threads can be locked via thread.edit(locked=True) for extra protection"
+            "optional_locking": "Threads can be locked via thread.edit(locked=True) for extra protection",
         }
 
         # Verify requirements are documented
-        assert len(protection_requirements) == 4, "Should have 4 protection layers documented"
+        assert (
+            len(protection_requirements) == 4
+        ), "Should have 4 protection layers documented"
         assert "bot_owned" in protection_requirements
         assert "channel_perms" in protection_requirements
 

@@ -17,6 +17,7 @@
 # Assuming we have a permissions utility or decorator we can test
 # Or checking command behavior
 
+
 class TestPermissions:
     """
     Tests for command permissions (Role-based access).
@@ -38,47 +39,54 @@ class TestPermissions:
         assert CharacterCommands is not None, "CharacterCommands cog must exist"
 
         # Verify register_character method exists
-        assert hasattr(CharacterCommands, 'register_character'), \
-            "CharacterCommands must have register_character method"
+        assert hasattr(
+            CharacterCommands, "register_character"
+        ), "CharacterCommands must have register_character method"
 
         # Get the register_character method
-        register_command = getattr(CharacterCommands, 'register_character')
-        
+        register_command = getattr(CharacterCommands, "register_character")
+
         # Handle wrapped Command object
-        if hasattr(register_command, 'callback'):
+        if hasattr(register_command, "callback"):
             register_method = register_command.callback
         else:
             register_method = register_command
 
         # Verify it's a coroutine (async command)
-        assert inspect.iscoroutinefunction(register_method), \
-            "/register_character must be an async command"
+        assert inspect.iscoroutinefunction(
+            register_method
+        ), "/register_character must be an async command"
 
         # Read source code to verify permission check exists
         source = inspect.getsource(register_method)
 
         # Verify critical security checks are present in source
-        assert 'GUILD_MEMBER_ROLE_IDS' in source, \
-            "/register_character must check GUILD_MEMBER_ROLE_IDS from settings"
+        assert (
+            "GUILD_MEMBER_ROLE_IDS" in source
+        ), "/register_character must check GUILD_MEMBER_ROLE_IDS from settings"
 
-        assert 'user_roles' in source or 'interaction.user.roles' in source, \
-            "/register_character must inspect user roles"
-        assert 'required role' in source.lower() or 'not have' in source.lower(), \
-            "/register_character must have authorization failure message"
+        assert (
+            "user_roles" in source or "interaction.user.roles" in source
+        ), "/register_character must inspect user roles"
+        assert (
+            "required role" in source.lower() or "not have" in source.lower()
+        ), "/register_character must have authorization failure message"
 
         # Verify RegistrationFlow is only instantiated after permission check
-        lines = source.split('\n')
+        lines = source.split("\n")
         permission_check_line = None
         registration_flow_line = None
 
         for i, line in enumerate(lines):
-            if 'GUILD_MEMBER_ROLE_IDS' in line:
+            if "GUILD_MEMBER_ROLE_IDS" in line:
                 permission_check_line = i
-            if 'RegistrationFlow' in line and 'import' not in line:
+            if "RegistrationFlow" in line and "import" not in line:
                 registration_flow_line = i
 
         assert permission_check_line is not None, "Permission check must exist"
-        assert registration_flow_line is not None, "RegistrationFlow instantiation must exist"
-        assert permission_check_line < registration_flow_line, \
-            "Permission check must occur BEFORE RegistrationFlow instantiation (security critical)"
-
+        assert (
+            registration_flow_line is not None
+        ), "RegistrationFlow instantiation must exist"
+        assert (
+            permission_check_line < registration_flow_line
+        ), "Permission check must occur BEFORE RegistrationFlow instantiation (security critical)"

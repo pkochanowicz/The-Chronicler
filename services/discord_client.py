@@ -18,6 +18,7 @@
 Discord Client Setup
 Configures the Discord bot client.
 """
+
 import logging
 import discord
 from discord.ext import commands

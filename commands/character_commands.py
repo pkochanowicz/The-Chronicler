@@ -18,18 +18,23 @@
 Character Commands
 User-facing commands for character management.
 """
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 from flows.registration_flow import RegistrationFlow
 from config.settings import get_settings
 
+
 class CharacterCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.settings = get_settings()
 
-    @app_commands.command(name="register_character", description="Begin the journey to register a new character.")
+    @app_commands.command(
+        name="register_character",
+        description="Begin the journey to register a new character.",
+    )
     async def register_character(self, interaction: discord.Interaction):
         """
         Interactive character registration.
@@ -38,16 +43,16 @@ class CharacterCommands(commands.Cog):
         # Check permissions (Guild Member)
         user_roles = [r.id for r in interaction.user.roles]
         allowed_roles = self.settings.GUILD_MEMBER_ROLE_IDS
-        
+
         # If all allowed roles are 0 (not configured), we might allow everyone or block.
         # Assuming at least one should be configured.
         # If strict check is needed:
         if not any(role_id in user_roles for role_id in allowed_roles):
-             await interaction.response.send_message(
-                 "❌ You do not have the required role to register a character.",
-                 ephemeral=True
-             )
-             return
+            await interaction.response.send_message(
+                "❌ You do not have the required role to register a character.",
+                ephemeral=True,
+            )
+            return
 
         # CRITICAL: Defer interaction immediately to prevent token expiration
         # The registration flow is long-running, so we acknowledge within 3 seconds
@@ -55,6 +60,7 @@ class CharacterCommands(commands.Cog):
 
         flow = RegistrationFlow(interaction)
         await flow.start()
+
 
 async def setup(bot):
     await bot.add_cog(CharacterCommands(bot))

@@ -2,9 +2,11 @@
 from typing import Dict, Optional
 from dataclasses import dataclass
 
+
 @dataclass
 class ClassMetadata:
     """Metadata for a WoW character class."""
+
     name: str
     emoji: str
     color_hex: str
@@ -13,6 +15,7 @@ class ClassMetadata:
     def get_color_int(self) -> int:
         """Convert hex color to integer for Discord embeds."""
         return int(self.color_hex.replace("#", ""), 16)
+
 
 CLASS_DATA: Dict[str, ClassMetadata] = {
     "Warrior": ClassMetadata("Warrior", "⚔️", "#C69B6D", "Warrior"),
@@ -26,15 +29,18 @@ CLASS_DATA: Dict[str, ClassMetadata] = {
     "Druid": ClassMetadata("Druid", "🌿", "#FF7C0A", "Druid"),
 }
 
+
 def get_class_metadata(class_name: str) -> Optional[ClassMetadata]:
     for key, value in CLASS_DATA.items():
         if key.lower() == class_name.lower():
             return value
     return None
 
+
 def get_class_emoji(class_name: str) -> str:
     metadata = get_class_metadata(class_name)
     return metadata.emoji if metadata else "📜"
+
 
 def get_class_color(class_name: str) -> int:
     metadata = get_class_metadata(class_name)

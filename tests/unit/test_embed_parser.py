@@ -18,6 +18,7 @@ import json
 from unittest.mock import MagicMock
 from utils.embed_parser import serialize_embeds, parse_embed_json
 
+
 class TestEmbedParser:
     """
     Tests for embed serialization/deserialization utilities.
@@ -27,10 +28,10 @@ class TestEmbedParser:
         """Test serializing a single embed to JSON."""
         mock_embed = MagicMock()
         mock_embed.to_dict.return_value = {"title": "Test Embed", "description": "Desc"}
-        
+
         json_str = serialize_embeds([mock_embed])
         data = json.loads(json_str)
-        
+
         assert isinstance(data, list)
         assert len(data) == 1
         assert data[0]["title"] == "Test Embed"
@@ -41,10 +42,10 @@ class TestEmbedParser:
         mock_embed1.to_dict.return_value = {"title": "Embed 1"}
         mock_embed2 = MagicMock()
         mock_embed2.to_dict.return_value = {"title": "Embed 2"}
-        
+
         json_str = serialize_embeds([mock_embed1, mock_embed2])
         data = json.loads(json_str)
-        
+
         assert len(data) == 2
         assert data[0]["title"] == "Embed 1"
         assert data[1]["title"] == "Embed 2"
@@ -79,8 +80,8 @@ class TestEmbedParser:
             "color": 0xC69B6D,
             "fields": [
                 {"name": "Race", "value": "Dwarf", "inline": True},
-                {"name": "Class", "value": "Warrior", "inline": True}
-            ]
+                {"name": "Class", "value": "Warrior", "inline": True},
+            ],
         }
         mock_embed.to_dict.return_value = embed_dict
 

@@ -21,8 +21,9 @@ from domain.validators import (
     validate_roles,
     validate_professions,
     validate_url,
-    ValidationError
+    ValidationError,
 )
+
 
 class TestValidators:
     """
@@ -32,9 +33,17 @@ class TestValidators:
     def test_validate_race_valid(self):
         """Test that all valid races are accepted."""
         valid_races = [
-            "Human", "Dwarf", "Night Elf", "Gnome", "High Elf",
-            "Orc", "Undead", "Tauren", "Troll", "Goblin",
-            "Other"
+            "Human",
+            "Dwarf",
+            "Night Elf",
+            "Gnome",
+            "High Elf",
+            "Orc",
+            "Undead",
+            "Tauren",
+            "Troll",
+            "Goblin",
+            "Other",
         ]
         for race in valid_races:
             assert validate_race(race) is True
@@ -49,8 +58,15 @@ class TestValidators:
     def test_validate_class_valid(self):
         """Test that all valid classes are accepted."""
         valid_classes = [
-            "Warrior", "Paladin", "Hunter", "Rogue", "Priest",
-            "Shaman", "Mage", "Warlock", "Druid"
+            "Warrior",
+            "Paladin",
+            "Hunter",
+            "Rogue",
+            "Priest",
+            "Shaman",
+            "Mage",
+            "Warlock",
+            "Druid",
         ]
         for char_class in valid_classes:
             assert validate_class(char_class) is True
@@ -101,7 +117,7 @@ class TestValidators:
         valid_urls = [
             "https://example.com/image.png",
             "http://test.com/pic.jpg",
-            "https://i.imgur.com/xyz.png"
+            "https://i.imgur.com/xyz.png",
         ]
         for url in valid_urls:
             assert validate_url(url) is True
@@ -112,7 +128,7 @@ class TestValidators:
             "ftp://example.com",
             "www.example.com",
             "example.com",
-            "not a url"
+            "not a url",
         ]
         for url in invalid_urls:
             with pytest.raises(ValidationError, match="Invalid URL format"):
@@ -141,23 +157,42 @@ class TestValidators:
     def test_validate_professions_mixed_limits(self):
         """Test profession limits with mixed primary/secondary combinations."""
         # Valid: 1 primary + 3 secondary
-        assert validate_professions([
-            "Mining",  # Primary
-            "First Aid", "Cooking", "Fishing"  # Secondary
-        ]) is True
+        assert (
+            validate_professions(
+                [
+                    "Mining",  # Primary
+                    "First Aid",
+                    "Cooking",
+                    "Fishing",  # Secondary
+                ]
+            )
+            is True
+        )
 
         # Valid: 2 primary + 2 secondary
-        assert validate_professions([
-            "Herbalism", "Alchemy",  # Primary
-            "Cooking", "First Aid"  # Secondary
-        ]) is True
+        assert (
+            validate_professions(
+                [
+                    "Herbalism",
+                    "Alchemy",  # Primary
+                    "Cooking",
+                    "First Aid",  # Secondary
+                ]
+            )
+            is True
+        )
 
         # Invalid: 3 primary + 2 secondary (primary limit exceeded)
         with pytest.raises(ValidationError, match="Cannot have more than 2 primary"):
-            validate_professions([
-                "Mining", "Blacksmithing", "Engineering",  # 3 primary (INVALID)
-                "Cooking", "First Aid"  # 2 secondary (ok)
-            ])
+            validate_professions(
+                [
+                    "Mining",
+                    "Blacksmithing",
+                    "Engineering",  # 3 primary (INVALID)
+                    "Cooking",
+                    "First Aid",  # 2 secondary (ok)
+                ]
+            )
 
     def test_validate_professions_categories(self):
         """Test that profession categories are correctly identified.
@@ -170,14 +205,20 @@ class TestValidators:
 
         # Define expected categories (per TECHNICAL.md)
         primary_professions = {
-            "Alchemy", "Blacksmithing", "Enchanting", "Engineering",
-            "Herbalism", "Leatherworking", "Mining", "Skinning",
-            "Tailoring", "Jewelcrafting", "Inscription"
+            "Alchemy",
+            "Blacksmithing",
+            "Enchanting",
+            "Engineering",
+            "Herbalism",
+            "Leatherworking",
+            "Mining",
+            "Skinning",
+            "Tailoring",
+            "Jewelcrafting",
+            "Inscription",
         }
 
-        secondary_professions = {
-            "First Aid", "Cooking", "Fishing", "Survival"
-        }
+        secondary_professions = {"First Aid", "Cooking", "Fishing", "Survival"}
 
         # Verify all valid professions are categorized
         all_professions = primary_professions | secondary_professions
@@ -191,9 +232,15 @@ class TestValidators:
         # - len([p for p in professions if p in secondary_professions]) <= 4
 
         # Test enforcement with maximum of each category
-        assert validate_professions(list(primary_professions)[:2]) is True  # 2 primary ok
-        assert validate_professions(list(secondary_professions)) is True  # 4 secondary ok
+        assert (
+            validate_professions(list(primary_professions)[:2]) is True
+        )  # 2 primary ok
+        assert (
+            validate_professions(list(secondary_professions)) is True
+        )  # 4 secondary ok
 
         # Test that exceeding primary limit raises error
-        with pytest.raises(ValidationError, match="Cannot have more than 2 primary professions"):
+        with pytest.raises(
+            ValidationError, match="Cannot have more than 2 primary professions"
+        ):
             validate_professions(list(primary_professions)[:3])  # 3 primary fails
