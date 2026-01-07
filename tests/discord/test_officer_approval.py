@@ -34,6 +34,8 @@ async def test_approve_button_success(mock_interaction, mock_settings, async_ses
     # Setup: User has officer role
     mock_interaction.user.roles = [MagicMock(id=999)]  # Officer role
     mock_interaction.channel.name = "[PENDING] Thorgar"
+    mock_interaction.message = MagicMock()
+    mock_interaction.message.edit = AsyncMock()
 
     # Mock DB service interaction
     with patch("views.officer_view.get_engine_and_session_maker") as mock_get_engine:

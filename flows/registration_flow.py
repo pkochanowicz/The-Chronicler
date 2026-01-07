@@ -100,7 +100,21 @@ class RegistrationFlow(InteractiveFlow):
             title="🏛️ The Chronicles of Azeroth",
             description=(
                 "*A massive tome materializes before you...*\n\n"
-                "Greetings! I am **Chronicler Thaldrin**.\n"
+                "Greetings! I am **Chronicler Thaldrin**.\n\n"
+                "📜 **Before We Begin - Preparation Checklist**\n\n"
+                "This process creates your character sheet, compatible with **TurtleRP Addon**:\n"
+                "🔗 https://github.com/tempranova/turtlerp/releases/latest\n\n"
+                "**Required fields:**\n"
+                "• Character Name (max 64 chars)\n"
+                "• Race & Class\n"
+                "• 3 Traits (max 128 chars each)\n"
+                "• Backstory/Story (max 2048 chars)\n\n"
+                "**Optional fields:**\n"
+                "• Personality description (max 1024 chars)\n"
+                "• Notable quotes (max 1024 chars)\n"
+                "• Professions (up to 2 primary + secondaries)\n"
+                "• Portrait image (upload, URL, default, or AI-generated)\n\n"
+                "⚠️ **Tip:** The backstory field can take time to write! Consider drafting in a text editor first, then paste when prompted.\n\n"
                 "May I record your Discord identity for our records?\n"
             ),
             color=0xC0C0C0,
@@ -351,7 +365,7 @@ class RegistrationFlow(InteractiveFlow):
                 "• Click the **+** button (or 📎 paperclip icon) next to the message box\n"
                 "• Select **Upload a File** and choose your image\n"
                 "• Send the message with the image\n\n"
-                "⏱️ You have **60 seconds**. Drag & drop is not supported in ephemeral chats.\n"
+                "⏱️ You have **3 minutes**. Drag & drop is not supported in ephemeral chats.\n"
                 "Make sure it's an image file (PNG, JPG, etc.)!",
                 ephemeral=True,
             )
@@ -365,7 +379,7 @@ class RegistrationFlow(InteractiveFlow):
                         and m.attachments
                     )
 
-                msg = await self.bot.wait_for("message", check=check, timeout=60.0)
+                msg = await self.bot.wait_for("message", check=check, timeout=180.0)
 
                 if msg.attachments:
                     attachment = msg.attachments[0]
@@ -708,9 +722,9 @@ class RegistrationFlow(InteractiveFlow):
 
 # --- Helper Modals ---
 class TraitsModal(Modal):
-    trait1 = TextInput(label="Trait 1", max_length=50, required=True)
-    trait2 = TextInput(label="Trait 2", max_length=50, required=True)
-    trait3 = TextInput(label="Trait 3", max_length=50, required=True)
+    trait1 = TextInput(label="Trait 1", max_length=128, required=True)
+    trait2 = TextInput(label="Trait 2", max_length=128, required=True)
+    trait3 = TextInput(label="Trait 3", max_length=128, required=True)
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
