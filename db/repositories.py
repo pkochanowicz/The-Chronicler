@@ -47,6 +47,16 @@ class CharacterRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_character_by_recruitment_msg_id(
+        self, recruitment_msg_id: int
+    ) -> Optional[db_schemas.Character]:
+        result = await self.db.execute(
+            select(db_schemas.Character).filter(
+                db_schemas.Character.recruitment_msg_id == recruitment_msg_id
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def get_all_characters(
         self, skip: int = 0, limit: int = 100
     ) -> List[db_schemas.Character]:

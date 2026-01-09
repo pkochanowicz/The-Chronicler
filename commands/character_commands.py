@@ -44,10 +44,13 @@ class CharacterCommands(commands.Cog):
         user_roles = [r.id for r in interaction.user.roles]
         allowed_roles = self.settings.GUILD_MEMBER_ROLE_IDS
 
-        # If all allowed roles are 0 (not configured), we might allow everyone or block.
-        # Assuming at least one should be configured.
-        # If strict check is needed:
-        if not any(role_id in user_roles for role_id in allowed_roles):
+        # If roles are configured (any non-zero role ID), enforce the check
+        # If all roles are 0 or empty (not configured), allow @everyone
+        roles_configured = any(role_id != 0 for role_id in allowed_roles)
+
+        if roles_configured and not any(
+            role_id in user_roles for role_id in allowed_roles
+        ):
             await interaction.response.send_message(
                 "❌ You do not have the required role to register a character.",
                 ephemeral=True,

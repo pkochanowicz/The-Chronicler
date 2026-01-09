@@ -25,11 +25,48 @@ class ReasonModal(discord.ui.Modal):
 
 
 class OfficerControlView(View):
-    def __init__(self, bot, character_id: int):
+    def __init__(self, bot, character_id: int = None):
         super().__init__(timeout=None)
         self.bot = bot
-        self.character_id = character_id
+        self.character_id = character_id  # Can be None for registered persistent views
         self.settings = get_settings()
+
+    async def _get_character_id_from_context(
+        self, interaction: discord.Interaction
+    ) -> int:
+        """
+        Get character_id from interaction context.
+        For persistent views after bot restart, character_id comes from the thread/message.
+        """
+        # If character_id was passed during init (normal flow), use it
+        if self.character_id:
+            return self.character_id
+
+        # Otherwise, look it up from the recruitment thread/message
+        from db.database import get_engine_and_session_maker
+        from services.character_service import CharacterService
+
+        _, session_maker = get_engine_and_session_maker()
+        async with session_maker() as session:
+            service = CharacterService(session)
+
+            # Try to find character by recruitment_msg_id (which is the thread ID for forum posts)
+            if interaction.channel:
+                char = await service.get_character_by_recruitment_msg_id(
+                    interaction.channel.id
+                )
+                if char:
+                    return char.id
+
+            # Fallback: try interaction.message.id
+            if interaction.message:
+                char = await service.get_character_by_recruitment_msg_id(
+                    interaction.message.id
+                )
+                if char:
+                    return char.id
+
+        raise ValueError("Could not determine character_id from interaction context")
 
     async def check_permissions(self, interaction: discord.Interaction) -> bool:
         user_roles = [r.id for r in interaction.user.roles]
@@ -66,6 +103,9 @@ class OfficerControlView(View):
             return
 
         try:
+            # Get character_id from context (supports persistent views after bot restart)
+            character_id = await self._get_character_id_from_context(interaction)
+
             _, session_maker = get_engine_and_session_maker()
             async with session_maker() as session:
                 service = CharacterService(session)
@@ -74,9 +114,7 @@ class OfficerControlView(View):
 
                 char_update = CharacterUpdate(status=CharacterStatusEnum.REGISTERED)
 
-                updated_char = await service.update_character(
-                    self.character_id, char_update
-                )
+                updated_char = await service.update_character(character_id, char_update)
                 await session.commit()
 
                 if not updated_char:
@@ -86,7 +124,7 @@ class OfficerControlView(View):
                     return
 
                 logger.info(
-                    f"Character {updated_char.name} (ID: {self.character_id}) approved by {interaction.user.name}"
+                    f"Character {updated_char.name} (ID: {character_id}) approved by {interaction.user.name}"
                 )
 
                 vault_channel_id = self.settings.CHARACTER_SHEET_VAULT_CHANNEL_ID
@@ -139,7 +177,7 @@ class OfficerControlView(View):
                 char_update_2 = CharacterUpdate(
                     forum_post_id=vault_thread_msg.thread.id
                 )
-                await service.update_character(self.character_id, char_update_2)
+                await service.update_character(character_id, char_update_2)
                 await session.commit()
 
                 logger.info(
@@ -200,6 +238,9 @@ class OfficerControlView(View):
         await self.reject_logic(interaction, reason)
 
     async def reject_logic(self, interaction: discord.Interaction, reason: str):
+        # Get character_id from context (supports persistent views after bot restart)
+        character_id = await self._get_character_id_from_context(interaction)
+
         _, session_maker = get_engine_and_session_maker()
         async with session_maker() as session:
             service = CharacterService(session)
@@ -207,16 +248,14 @@ class OfficerControlView(View):
             from models.pydantic_models import CharacterUpdate
 
             char_update = CharacterUpdate(status=CharacterStatusEnum.REJECTED)
-            updated_char = await service.update_character(
-                self.character_id, char_update
-            )
+            updated_char = await service.update_character(character_id, char_update)
             await session.commit()
 
             if not updated_char:
                 return
 
             logger.info(
-                f"Character {updated_char.name} (ID: {self.character_id}) rejected by {interaction.user.name}. Reason: {reason}"
+                f"Character {updated_char.name} (ID: {character_id}) rejected by {interaction.user.name}. Reason: {reason}"
             )
 
             # Remove buttons from the recruitment message
@@ -267,10 +306,13 @@ class OfficerControlView(View):
         await self.request_edit_logic(interaction, reason)
 
     async def request_edit_logic(self, interaction: discord.Interaction, reason: str):
+        # Get character_id from context (supports persistent views after bot restart)
+        character_id = await self._get_character_id_from_context(interaction)
+
         _, session_maker = get_engine_and_session_maker()
         async with session_maker() as session:
             service = CharacterService(session)
-            char = await service.get_character_by_id(self.character_id)
+            char = await service.get_character_by_id(character_id)
             if not char:
                 return
 

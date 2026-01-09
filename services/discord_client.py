@@ -22,6 +22,7 @@ Configures the Discord bot client.
 import logging
 import discord
 from discord.ext import commands
+from views.officer_view import OfficerControlView
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,15 @@ def create_bot():
     async def on_ready():
         logger.info(f"Bot logged in as {bot.user.name} (ID: {bot.user.id})")
 
-        # Load cogs here if not loaded in main
-        # But main.py will handle loading.
+        # Register persistent views (timeout=None) so they work after bot restarts
+        # This allows buttons on old messages to still function
+        try:
+            # Register OfficerControlView with a dummy character_id
+            # The actual character_id is stored in the button's custom_id
+            bot.add_view(OfficerControlView(bot, 0))
+            logger.info("Registered persistent view: OfficerControlView")
+        except Exception as e:
+            logger.error(f"Failed to register persistent views: {e}")
 
         # Sync slash commands
         try:

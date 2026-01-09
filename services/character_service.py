@@ -41,6 +41,16 @@ class CharacterService:
             return pydantic_models.CharacterInDB.model_validate(db_character)
         return None
 
+    async def get_character_by_recruitment_msg_id(
+        self, recruitment_msg_id: int
+    ) -> Optional[pydantic_models.CharacterInDB]:
+        db_character = await self.character_repo.get_character_by_recruitment_msg_id(
+            recruitment_msg_id
+        )
+        if db_character:
+            return pydantic_models.CharacterInDB.model_validate(db_character)
+        return None
+
     async def get_all_characters(
         self, skip: int = 0, limit: int = 100
     ) -> List[pydantic_models.CharacterInDB]:
