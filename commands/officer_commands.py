@@ -44,7 +44,13 @@ class OfficerCommands(commands.Cog):
         user_roles = [r.id for r in interaction.user.roles]
         allowed_roles = self.settings.OFFICER_ROLE_IDS
 
-        if not any(role_id in user_roles for role_id in allowed_roles):
+        # If roles are configured (any non-zero role ID), enforce the check
+        # If all roles are 0 or empty (not configured), allow @everyone
+        roles_configured = any(role_id != 0 for role_id in allowed_roles)
+
+        if roles_configured and not any(
+            role_id in user_roles for role_id in allowed_roles
+        ):
             await interaction.response.send_message(
                 "❌ You are not authorized to perform the Rite of Remembrance.",
                 ephemeral=True,
