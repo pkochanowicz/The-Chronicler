@@ -476,7 +476,7 @@ class RegistrationFlow(InteractiveFlow):
                 "• Click the **+** button (or 📎 paperclip icon) next to the message box\n"
                 "• Select **Upload a File** and choose your image\n"
                 "• Send the message with the image\n\n"
-                "⏱️ You have **15 minutes**. Drag & drop is not supported in ephemeral chats.\n"
+                "⏱️ You have **30 minutes**. Drag & drop is not supported in ephemeral chats.\n"
                 "Make sure it's an image file (PNG, JPG, etc.)!",
                 ephemeral=True,
             )

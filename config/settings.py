@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     PORT: int = 8080
 
     # Bot Behavior
-    INTERACTIVE_TIMEOUT_SECONDS: int = 900
+    INTERACTIVE_TIMEOUT_SECONDS: int = 1800
     POLL_INTERVAL_SECONDS: int = 60
 
     # Visuals
