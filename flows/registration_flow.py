@@ -16,6 +16,13 @@ from domain.game_data import CLASS_DATA
 
 logger = logging.getLogger(__name__)
 
+
+class FlowCancelled(Exception):
+    """Exception raised when user cancels the flow."""
+
+    pass
+
+
 # Profession validation
 MAIN_PROFESSIONS = [
     "Alchemy",
@@ -37,6 +44,20 @@ class RegistrationFlow(InteractiveFlow):
     """
     Handles the interactive character registration process.
     """
+
+    def _create_cancel_callback(self, view: View):
+        """Helper to create a cancel callback that raises FlowCancelled."""
+
+        async def cancel_callback(interaction: discord.Interaction):
+            await interaction.response.send_message(
+                "❌ **Registration Cancelled**\n\nThe registration process has been cancelled. "
+                "You can start over anytime with `/register_character`.",
+                ephemeral=True,
+            )
+            view.stop()
+            raise FlowCancelled("User cancelled the registration flow")
+
+        return cancel_callback
 
     async def start(self):
         """Start the 12-step journey."""
@@ -83,6 +104,12 @@ class RegistrationFlow(InteractiveFlow):
             if self.data.get("confirmed"):
                 await self.finalize()
 
+        except FlowCancelled:
+            logger.info(
+                f"Registration flow cancelled by user {self.interaction.user.name}"
+            )
+            # User already received cancellation message, no need to send another
+            return
         except asyncio.TimeoutError:
             await self.handle_timeout()
         except Exception as e:
@@ -149,12 +176,24 @@ class RegistrationFlow(InteractiveFlow):
         await view.wait()
 
     async def step_name(self):
+        view = View()
+        cancel_btn = Button(
+            label="Cancel Registration",
+            style=discord.ButtonStyle.danger,
+            emoji="❌",
+        )
+        cancel_btn.callback = self._create_cancel_callback(view)
+        view.add_item(cancel_btn)
+
         await self.interaction.followup.send(
-            "📜 **CHAPTER ONE: THE NAME**\nType your character's full name:",
+            "📜 **CHAPTER ONE: THE NAME**\nType your character's full name (max 64 characters):",
+            view=view,
             ephemeral=True,
         )
+
         msg = await self.wait_for_message()
         self.data["char_name"] = msg.content.strip()
+        view.stop()
         await self.interaction.followup.send(
             f"Recorded: **{self.data['char_name']}**", ephemeral=True
         )
@@ -171,6 +210,15 @@ class RegistrationFlow(InteractiveFlow):
 
         select.callback = callback
         view.add_item(select)
+
+        cancel_btn = Button(
+            label="Cancel Registration",
+            style=discord.ButtonStyle.danger,
+            emoji="❌",
+        )
+        cancel_btn.callback = self._create_cancel_callback(view)
+        view.add_item(cancel_btn)
+
         await self.interaction.followup.send(
             "⚔️ **CHAPTER TWO: THE BLOODLINE**", view=view, ephemeral=True
         )
@@ -191,6 +239,15 @@ class RegistrationFlow(InteractiveFlow):
 
         select.callback = callback
         view.add_item(select)
+
+        cancel_btn = Button(
+            label="Cancel Registration",
+            style=discord.ButtonStyle.danger,
+            emoji="❌",
+        )
+        cancel_btn.callback = self._create_cancel_callback(view)
+        view.add_item(cancel_btn)
+
         await self.interaction.followup.send(
             "🔮 **CHAPTER THREE: THE CALLING**", view=view, ephemeral=True
         )
@@ -210,6 +267,15 @@ class RegistrationFlow(InteractiveFlow):
 
         select.callback = callback
         view.add_item(select)
+
+        cancel_btn = Button(
+            label="Cancel Registration",
+            style=discord.ButtonStyle.danger,
+            emoji="❌",
+        )
+        cancel_btn.callback = self._create_cancel_callback(view)
+        view.add_item(cancel_btn)
+
         await self.interaction.followup.send(
             "🎭 **CHAPTER FOUR: ROLES**", view=view, ephemeral=True
         )
@@ -242,6 +308,15 @@ class RegistrationFlow(InteractiveFlow):
         skip.callback = skip_callback
         view.add_item(select)
         view.add_item(skip)
+
+        cancel_btn = Button(
+            label="Cancel Registration",
+            style=discord.ButtonStyle.danger,
+            emoji="❌",
+        )
+        cancel_btn.callback = self._create_cancel_callback(view)
+        view.add_item(cancel_btn)
+
         await self.interaction.followup.send(
             "🔨 **CHAPTER FIVE: CRAFTS**", view=view, ephemeral=True
         )
@@ -262,6 +337,15 @@ class RegistrationFlow(InteractiveFlow):
 
         btn.callback = cb
         view.add_item(btn)
+
+        cancel_btn = Button(
+            label="Cancel Registration",
+            style=discord.ButtonStyle.danger,
+            emoji="❌",
+        )
+        cancel_btn.callback = self._create_cancel_callback(view)
+        view.add_item(cancel_btn)
+
         await self.interaction.followup.send(
             "⚡ **CHAPTER SIX: TRAITS**", view=view, ephemeral=True
         )
@@ -285,6 +369,15 @@ class RegistrationFlow(InteractiveFlow):
 
         btn.callback = cb
         view.add_item(btn)
+
+        cancel_btn = Button(
+            label="Cancel Registration",
+            style=discord.ButtonStyle.danger,
+            emoji="❌",
+        )
+        cancel_btn.callback = self._create_cancel_callback(view)
+        view.add_item(cancel_btn)
+
         await self.interaction.followup.send(
             "📖 **CHAPTER SEVEN: TALE**", view=view, ephemeral=True
         )
@@ -314,6 +407,15 @@ class RegistrationFlow(InteractiveFlow):
         skip.callback = sk
         view.add_item(btn)
         view.add_item(skip)
+
+        cancel_btn = Button(
+            label="Cancel Registration",
+            style=discord.ButtonStyle.danger,
+            emoji="❌",
+        )
+        cancel_btn.callback = self._create_cancel_callback(view)
+        view.add_item(cancel_btn)
+
         await self.interaction.followup.send(
             "💭 **CHAPTER EIGHT: PERSONALITY**", view=view, ephemeral=True
         )
@@ -341,6 +443,15 @@ class RegistrationFlow(InteractiveFlow):
         skip.callback = sk
         view.add_item(btn)
         view.add_item(skip)
+
+        cancel_btn = Button(
+            label="Cancel Registration",
+            style=discord.ButtonStyle.danger,
+            emoji="❌",
+        )
+        cancel_btn.callback = self._create_cancel_callback(view)
+        view.add_item(cancel_btn)
+
         await self.interaction.followup.send(
             "💬 **CHAPTER NINE: QUOTES**", view=view, ephemeral=True
         )
@@ -365,7 +476,7 @@ class RegistrationFlow(InteractiveFlow):
                 "• Click the **+** button (or 📎 paperclip icon) next to the message box\n"
                 "• Select **Upload a File** and choose your image\n"
                 "• Send the message with the image\n\n"
-                "⏱️ You have **3 minutes**. Drag & drop is not supported in ephemeral chats.\n"
+                "⏱️ You have **15 minutes**. Drag & drop is not supported in ephemeral chats.\n"
                 "Make sure it's an image file (PNG, JPG, etc.)!",
                 ephemeral=True,
             )
@@ -379,7 +490,9 @@ class RegistrationFlow(InteractiveFlow):
                         and m.attachments
                     )
 
-                msg = await self.bot.wait_for("message", check=check, timeout=180.0)
+                msg = await self.bot.wait_for(
+                    "message", check=check, timeout=self.timeout
+                )
 
                 if msg.attachments:
                     attachment = msg.attachments[0]
@@ -457,6 +570,15 @@ class RegistrationFlow(InteractiveFlow):
         view.add_item(btn_url)
         view.add_item(btn_default)
         view.add_item(btn_ai)
+
+        cancel_btn = Button(
+            label="Cancel Registration",
+            style=discord.ButtonStyle.danger,
+            emoji="❌",
+        )
+        cancel_btn.callback = self._create_cancel_callback(view)
+        view.add_item(cancel_btn)
+
         await self.interaction.followup.send(
             "🎨 **CHAPTER TEN: PORTRAIT**", view=view, ephemeral=True
         )
