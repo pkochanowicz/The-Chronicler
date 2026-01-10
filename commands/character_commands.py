@@ -39,24 +39,8 @@ class CharacterCommands(commands.Cog):
         """
         Interactive character registration.
         Starts the cinematic 12-step flow.
+        Available to all Discord server members.
         """
-        # Check permissions (Guild Member)
-        user_roles = [r.id for r in interaction.user.roles]
-        allowed_roles = self.settings.GUILD_MEMBER_ROLE_IDS
-
-        # If roles are configured (any non-zero role ID), enforce the check
-        # If all roles are 0 or empty (not configured), allow @everyone
-        roles_configured = any(role_id != 0 for role_id in allowed_roles)
-
-        if roles_configured and not any(
-            role_id in user_roles for role_id in allowed_roles
-        ):
-            await interaction.response.send_message(
-                "❌ You do not have the required role to register a character.",
-                ephemeral=True,
-            )
-            return
-
         # CRITICAL: Defer interaction immediately to prevent token expiration
         # The registration flow is long-running, so we acknowledge within 3 seconds
         await interaction.response.defer(ephemeral=True)

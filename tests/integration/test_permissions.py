@@ -23,13 +23,13 @@ class TestPermissions:
     Tests for command permissions (Role-based access).
     """
 
-    def test_register_requires_member(self):
+    def test_register_is_public(self):
         """
-        Verify /register_character implements guild member role verification.
+        Verify /register_character is available to all Discord server members.
 
-        Per TECHNICAL.md, /register_character requires Wanderer, Seeker,
-        Pathfinder, or Trailwarden role (any guild member).
-        Implementation is in commands/character_commands.py line 37-49.
+        Updated 2025-01-10: Removed role restrictions to allow @everyone
+        to register characters. The command should be a public endpoint.
+        Implementation is in commands/character_commands.py.
         """
         # Import the actual command implementation
         from commands.character_commands import CharacterCommands
@@ -57,36 +57,17 @@ class TestPermissions:
             register_method
         ), "/register_character must be an async command"
 
-        # Read source code to verify permission check exists
+        # Read source code to verify NO permission check exists
         source = inspect.getsource(register_method)
 
-        # Verify critical security checks are present in source
+        # Verify that role checks have been removed
         assert (
-            "GUILD_MEMBER_ROLE_IDS" in source
-        ), "/register_character must check GUILD_MEMBER_ROLE_IDS from settings"
+            "GUILD_MEMBER_ROLE_IDS" not in source
+        ), "/register_character should NOT check GUILD_MEMBER_ROLE_IDS (public command)"
 
         assert (
-            "user_roles" in source or "interaction.user.roles" in source
-        ), "/register_character must inspect user roles"
-        assert (
-            "required role" in source.lower() or "not have" in source.lower()
-        ), "/register_character must have authorization failure message"
+            "user_roles" not in source
+        ), "/register_character should NOT inspect user roles (public command)"
 
-        # Verify RegistrationFlow is only instantiated after permission check
-        lines = source.split("\n")
-        permission_check_line = None
-        registration_flow_line = None
-
-        for i, line in enumerate(lines):
-            if "GUILD_MEMBER_ROLE_IDS" in line:
-                permission_check_line = i
-            if "RegistrationFlow" in line and "import" not in line:
-                registration_flow_line = i
-
-        assert permission_check_line is not None, "Permission check must exist"
-        assert (
-            registration_flow_line is not None
-        ), "RegistrationFlow instantiation must exist"
-        assert (
-            permission_check_line < registration_flow_line
-        ), "Permission check must occur BEFORE RegistrationFlow instantiation (security critical)"
+        # Verify RegistrationFlow is instantiated (command is functional)
+        assert "RegistrationFlow" in source, "RegistrationFlow instantiation must exist"
